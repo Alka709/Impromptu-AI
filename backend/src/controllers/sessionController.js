@@ -87,6 +87,10 @@ const getSessionEvaluation = async (req, res) => {
     const metricsRec = await db.select().from(metricesCalculated)
       .where(eq(metricesCalculated.session_id, sessionId));
 
+    if (!metricsRec.length) {
+      return res.status(202).json({ status: 'processing' });
+    }
+
     const evaluation = records[0];
     
     // Defensively check type before parsing

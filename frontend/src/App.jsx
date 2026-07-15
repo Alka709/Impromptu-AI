@@ -49,7 +49,7 @@ const Login = ({ setToken }) => {
         <input className="input-field" type="password" placeholder="Password" value={password} onChange={e=>setPassword(e.target.value)} required />
         <button type="submit" className="btn-primary">Log In</button>
       </form>
-      <p style={{marginTop: '1rem', cursor: 'pointer', color: '#a855f7'}} onClick={() => navigate('/signup')}>Need an account? Sign up</p>
+      <p style={{marginTop: '1rem', cursor: 'pointer', color: 'var(--primary-color)'}} onClick={() => navigate('/signup')}>Need an account? Sign up</p>
     </div>
   );
 };
@@ -87,7 +87,7 @@ const Signup = ({ setToken }) => {
         <input className="input-field" type="password" placeholder="Password" value={password} onChange={e=>setPassword(e.target.value)} required />
         <button type="submit" className="btn-primary">Sign Up</button>
       </form>
-      <p style={{marginTop: '1rem', cursor: 'pointer', color: '#a855f7'}} onClick={() => navigate('/login')}>Already have an account? Log in</p>
+      <p style={{marginTop: '1rem', cursor: 'pointer', color: 'var(--primary-color)'}} onClick={() => navigate('/login')}>Already have an account? Log in</p>
     </div>
   );
 };
@@ -319,7 +319,7 @@ const SessionFlow = ({ token }) => {
 
       {(flowState === 'prep' || flowState === 'recording') && (
         <>
-          <h2 style={{ fontSize: '1.25rem', color: '#fff', marginBottom: '1.5rem' }}>{session.topic}</h2>
+          <h2 style={{ fontSize: '1.25rem', color: 'var(--text-dark)', marginBottom: '1.5rem' }}>{session.topic}</h2>
           {flowState === 'prep' && (
             <div className="flex-col">
               {!showHints ? (
@@ -347,8 +347,8 @@ const SessionFlow = ({ token }) => {
 
       {flowState === 'analyzing' && (
         <div className="flex-col" style={{ alignItems: 'center' }}>
-          <h2 className="pulsing-text" style={{ color: '#a855f7' }}>AI is analyzing your speech...</h2>
-          <p style={{ marginTop: '1rem', color: '#ccc' }}>This usually takes about 10-20 seconds.</p>
+          <h2 className="pulsing-text" style={{ color: 'var(--primary-color)' }}>AI is analyzing your speech...</h2>
+          <p style={{ marginTop: '1rem', color: 'var(--text-medium)' }}>This usually takes about 10-20 seconds.</p>
         </div>
       )}
 
@@ -512,13 +512,13 @@ const SessionFlow = ({ token }) => {
               <h4>Session Evaluation Bullets</h4>
               <div className="flex-row responsive-flex" style={{ gap: '2rem', justifyContent: 'space-between', textAlign: 'left' }}>
                 <div style={{ flex: '1' }}>
-                  <h5 style={{ color: '#4ade80', fontSize: '1rem', marginTop: '0', marginBottom: '0.5rem' }}>Strengths</h5>
+                  <h5 style={{ color: 'var(--accent-color)', fontSize: '1rem', marginTop: '0', marginBottom: '0.5rem' }}>Strengths</h5>
                   <ul className="dashboard-list green-bullets">
                     {evaluationResult.strengths?.map((s, i) => <li key={i}>{s}</li>)}
                   </ul>
                 </div>
                 <div style={{ flex: '1' }}>
-                  <h5 style={{ color: '#f87171', fontSize: '1rem', marginTop: '0', marginBottom: '0.5rem' }}>Areas to Improve</h5>
+                  <h5 style={{ color: '#E57373', fontSize: '1rem', marginTop: '0', marginBottom: '0.5rem' }}>Areas to Improve</h5>
                   <ul className="dashboard-list red-bullets">
                     {evaluationResult.weaknesses?.map((w, i) => <li key={i}>{w}</li>)}
                   </ul>
@@ -588,7 +588,7 @@ const AudioVisualizer = ({ stream }) => {
       canvasCtx.clearRect(0, 0, canvas.width, canvas.height);
       
       canvasCtx.lineWidth = 2;
-      canvasCtx.strokeStyle = '#a855f7'; // Matches the theme color
+      canvasCtx.strokeStyle = '#4C6FFF'; // Calm Primary color
       canvasCtx.beginPath();
 
       const sliceWidth = canvas.width * 1.0 / bufferLength;
