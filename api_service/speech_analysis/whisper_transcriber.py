@@ -26,6 +26,8 @@ def transcribe(audio_path: str) -> dict[str, Any]:
     model = _load_model()
     segments_gen, info = model.transcribe(
         audio_path,
+        language="en",
+        task="transcribe",
         beam_size=5,
         word_timestamps=True,
         vad_filter=True,
