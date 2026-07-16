@@ -41,7 +41,14 @@ const signup = async (req, res) => {
       { expiresIn: process.env.JWT_EXPIRATION || '1d' }
     );
 
-    return res.status(201).json({ user: newUser, token });
+    res.cookie('token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 24 * 60 * 60 * 1000 // 1 day
+    });
+
+    return res.status(201).json({ user: newUser });
   } catch (error) {
     console.error('Signup error:', error);
     return res.status(500).json({ error: 'Internal server error' });
@@ -79,7 +86,14 @@ const login = async (req, res) => {
 
     const { password_hash, ...userWithoutPassword } = user;
 
-    return res.status(200).json({ user: userWithoutPassword, token });
+    res.cookie('token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 24 * 60 * 60 * 1000 // 1 day
+    });
+
+    return res.status(200).json({ user: userWithoutPassword });
   } catch (error) {
     console.error('Login error:', error);
     return res.status(500).json({ error: 'Internal server error' });
@@ -87,10 +101,23 @@ const login = async (req, res) => {
 };
 
 const logout = async (req, res) => {
-  // Since we are using stateless JWTs returned in the JSON body,
-  // the actual logout happens on the client side by deleting the token.
-  // This endpoint is provided for consistency and in case we switch to cookies later.
-  return res.status(200).json({ message: 'Logged out successfully. Please remove your token on the client side.' });
+  res.clearCookie('token');
+  return res.status(200).json({ message: 'Logged out successfully.' });
 };
 
-module.exports = { signup, login, logout }
+const me = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const foundUsers = await db.select().from(users).where(eq(users.id, userId));
+    if (foundUsers.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    const { password_hash, ...userWithoutPassword } = foundUsers[0];
+    return res.status(200).json({ user: userWithoutPassword });
+  } catch (error) {
+    console.error('Me endpoint error:', error);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+module.exports = { signup, login, logout, me }

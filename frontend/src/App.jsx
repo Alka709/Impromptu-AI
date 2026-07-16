@@ -23,21 +23,43 @@ const AuthenticatedLayout = ({ children }) => (
 );
 
 const App = () => {
-  const [token, setToken] = useState(localStorage.getItem('token') || null);
+  const [user, setUser] = useState(null);
+  const [loadingAuth, setLoadingAuth] = useState(true);
+
+  useEffect(() => {
+    const fetchMe = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/auth/me`, { credentials: 'include' });
+        if (res.ok) {
+          const data = await res.json();
+          setUser(data.user);
+        } else {
+          setUser(null);
+        }
+      } catch (err) {
+        setUser(null);
+      } finally {
+        setLoadingAuth(false);
+      }
+    };
+    fetchMe();
+  }, []);
+
+  if (loadingAuth) return <div className="glass-card">Loading...</div>;
 
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/login" element={<Login setToken={setToken} />} />
-        <Route path="/signup" element={<Signup setToken={setToken} />} />
-        <Route path="/" element={token ? <Dashboard token={token} setToken={setToken} /> : <Navigate to="/login" />} />
-        <Route path="/session/:id" element={token ? <SessionFlow token={token} /> : <Navigate to="/login" />} />
+        <Route path="/login" element={<Login setUser={setUser} />} />
+        <Route path="/signup" element={<Signup setUser={setUser} />} />
+        <Route path="/" element={user ? <Dashboard user={user} setUser={setUser} /> : <Navigate to="/login" />} />
+        <Route path="/session/:id" element={user ? <SessionFlow user={user} /> : <Navigate to="/login" />} />
       </Routes>
     </BrowserRouter>
   );
 };
 
-const Login = ({ setToken }) => {
+const Login = ({ setUser }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const navigate = useNavigate();
@@ -47,12 +69,12 @@ const Login = ({ setToken }) => {
     const res = await fetch(`${API_BASE}/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password })
+      body: JSON.stringify({ email, password }),
+      credentials: 'include'
     });
     const data = await res.json();
-    if (data.token) {
-      localStorage.setItem('token', data.token);
-      setToken(data.token);
+    if (res.ok && data.user) {
+      setUser(data.user);
       navigate('/');
     } else {
       alert(data.error || 'Login failed');
@@ -77,7 +99,7 @@ const Login = ({ setToken }) => {
   );
 };
 
-const Signup = ({ setToken }) => {
+const Signup = ({ setUser }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
@@ -88,12 +110,12 @@ const Signup = ({ setToken }) => {
     const res = await fetch(`${API_BASE}/auth/signup`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password, name })
+      body: JSON.stringify({ email, password, name }),
+      credentials: 'include'
     });
     const data = await res.json();
-    if (data.token) {
-      localStorage.setItem('token', data.token);
-      setToken(data.token);
+    if (res.ok && data.user) {
+      setUser(data.user);
       navigate('/');
     } else {
       alert(data.error || 'Signup failed');
@@ -119,7 +141,7 @@ const Signup = ({ setToken }) => {
   );
 };
 
-const Dashboard = ({ token, setToken }) => {
+const Dashboard = ({ user, setUser }) => {
   const [category, setCategory] = useState('Technology');
   const [difficulty, setDifficulty] = useState('medium');
   const [loading, setLoading] = useState(false);
@@ -130,9 +152,9 @@ const Dashboard = ({ token, setToken }) => {
     const res = await fetch(`${API_BASE}/sessions`, {
       method: 'POST',
       headers: { 
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
+        'Content-Type': 'application/json'
       },
+      credentials: 'include',
       body: JSON.stringify({ category, difficulty })
     });
     const data = await res.json();
@@ -144,9 +166,11 @@ const Dashboard = ({ token, setToken }) => {
     }
   };
 
-  const logout = () => {
-    localStorage.removeItem('token');
-    setToken(null);
+  const logout = async () => {
+    try {
+      await fetch(`${API_BASE}/auth/logout`, { method: 'POST', credentials: 'include' });
+    } catch(e) {}
+    setUser(null);
   };
 
   return (
@@ -177,7 +201,7 @@ const Dashboard = ({ token, setToken }) => {
   );
 };
 
-const SessionFlow = ({ token }) => {
+const SessionFlow = ({ user }) => {
   const navigate = useNavigate();
   const { id: sessionId } = useParams();
   const location = useLocation();
@@ -199,7 +223,7 @@ const SessionFlow = ({ token }) => {
       const fetchSession = async () => {
         try {
           const res = await fetch(`${API_BASE}/sessions/${sessionId}`, {
-            headers: { 'Authorization': `Bearer ${token}` }
+            credentials: 'include'
           });
           if (res.ok) {
             const data = await res.json();
@@ -216,7 +240,7 @@ const SessionFlow = ({ token }) => {
       };
       fetchSession();
     }
-  }, [session, sessionId, token, navigate]);
+  }, [session, sessionId, user, navigate]);
 
   useEffect(() => {
     if (flowState === 'prep' || flowState === 'recording') {
@@ -269,7 +293,7 @@ const SessionFlow = ({ token }) => {
     try {
       const res = await fetch(`${API_BASE}/sessions/${session.id}/audio`, {
         method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}` },
+        credentials: 'include',
         body: formData
       });
       const data = await res.json();
@@ -291,7 +315,7 @@ const SessionFlow = ({ token }) => {
       intervalId = setInterval(async () => {
         try {
           const res = await fetch(`${API_BASE}/sessions/${session.id}/evaluation`, {
-            headers: { 'Authorization': `Bearer ${token}` }
+            credentials: 'include'
           });
           if (res.status === 200) {
             const data = await res.json();
@@ -307,7 +331,7 @@ const SessionFlow = ({ token }) => {
       }, 3000);
     }
     return () => clearInterval(intervalId);
-  }, [flowState, session, token]);
+  }, [flowState, session, user]);
 
   const formatTime = (seconds) => {
     const m = Math.floor(seconds / 60).toString().padStart(2, '0');
