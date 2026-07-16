@@ -1,7 +1,26 @@
 import { useState, useEffect, useRef } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useNavigate, useParams, useLocation } from 'react-router-dom';
+import { Mic } from 'lucide-react';
 
 const API_BASE = 'http://localhost:4000/api';
+
+const AppLogo = () => (
+  <div className="app-logo">
+    <Mic className="app-logo-icon" size={26} strokeWidth={2} />
+    <span className="app-logo-text">Impromptu AI</span>
+  </div>
+);
+
+const AuthenticatedLayout = ({ children }) => (
+  <div className="app-shell">
+    <header className="app-header">
+      <AppLogo />
+    </header>
+    <main className="app-main">
+      {children}
+    </main>
+  </div>
+);
 
 const App = () => {
   const [token, setToken] = useState(localStorage.getItem('token') || null);
@@ -41,15 +60,19 @@ const Login = ({ setToken }) => {
   };
 
   return (
-    <div className="glass-card">
-      <h1>Impromptu</h1>
-      <h2>Login</h2>
-      <form onSubmit={handleLogin} className="flex-col">
-        <input className="input-field" type="email" placeholder="Email" value={email} onChange={e=>setEmail(e.target.value)} required />
-        <input className="input-field" type="password" placeholder="Password" value={password} onChange={e=>setPassword(e.target.value)} required />
-        <button type="submit" className="btn-primary">Log In</button>
-      </form>
-      <p style={{marginTop: '1rem', cursor: 'pointer', color: 'var(--primary-color)'}} onClick={() => navigate('/signup')}>Need an account? Sign up</p>
+    <div className="auth-page">
+      <div className="glass-card">
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1.5rem' }}>
+          <AppLogo />
+        </div>
+        <h2>Login</h2>
+        <form onSubmit={handleLogin} className="flex-col">
+          <input className="input-field" type="email" placeholder="Email" value={email} onChange={e=>setEmail(e.target.value)} required />
+          <input className="input-field" type="password" placeholder="Password" value={password} onChange={e=>setPassword(e.target.value)} required />
+          <button type="submit" className="btn-primary">Log In</button>
+        </form>
+        <p className="link-text" onClick={() => navigate('/signup')}>Need an account? Sign up</p>
+      </div>
     </div>
   );
 };
@@ -78,16 +101,20 @@ const Signup = ({ setToken }) => {
   };
 
   return (
-    <div className="glass-card">
-      <h1>Impromptu</h1>
-      <h2>Sign Up</h2>
-      <form onSubmit={handleSignup} className="flex-col">
-        <input className="input-field" type="text" placeholder="Name" value={name} onChange={e=>setName(e.target.value)} required />
-        <input className="input-field" type="email" placeholder="Email" value={email} onChange={e=>setEmail(e.target.value)} required />
-        <input className="input-field" type="password" placeholder="Password" value={password} onChange={e=>setPassword(e.target.value)} required />
-        <button type="submit" className="btn-primary">Sign Up</button>
-      </form>
-      <p style={{marginTop: '1rem', cursor: 'pointer', color: 'var(--primary-color)'}} onClick={() => navigate('/login')}>Already have an account? Log in</p>
+    <div className="auth-page">
+      <div className="glass-card">
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1.5rem' }}>
+          <AppLogo />
+        </div>
+        <h2>Sign Up</h2>
+        <form onSubmit={handleSignup} className="flex-col">
+          <input className="input-field" type="text" placeholder="Name" value={name} onChange={e=>setName(e.target.value)} required />
+          <input className="input-field" type="email" placeholder="Email" value={email} onChange={e=>setEmail(e.target.value)} required />
+          <input className="input-field" type="password" placeholder="Password" value={password} onChange={e=>setPassword(e.target.value)} required />
+          <button type="submit" className="btn-primary">Sign Up</button>
+        </form>
+        <p className="link-text" onClick={() => navigate('/login')}>Already have an account? Log in</p>
+      </div>
     </div>
   );
 };
@@ -123,28 +150,30 @@ const Dashboard = ({ token, setToken }) => {
   };
 
   return (
-    <div className="glass-card">
-      <h1>Dashboard</h1>
-      <h2>New Session</h2>
-      <div className="flex-col">
-        <select className="input-field" value={category} onChange={e=>setCategory(e.target.value)}>
-          <option>Technology</option>
-          <option>Education</option>
-          <option>Current Affairs</option>
-          <option>Personal Experience</option>
-          <option>Business & Entrepreneurship</option>
-        </select>
-        <select className="input-field" value={difficulty} onChange={e=>setDifficulty(e.target.value)}>
-          <option>easy</option>
-          <option>medium</option>
-          <option>hard</option>
-        </select>
-        <button className="btn-primary" onClick={startSession} disabled={loading}>
-          {loading ? 'Generating Topic...' : 'Start Session'}
-        </button>
-        <button className="btn-secondary" onClick={logout}>Log Out</button>
+    <AuthenticatedLayout>
+      <div className="glass-card">
+        <h1>Dashboard</h1>
+        <h2>New Session</h2>
+        <div className="flex-col">
+          <select className="input-field" value={category} onChange={e=>setCategory(e.target.value)}>
+            <option>Technology</option>
+            <option>Education</option>
+            <option>Current Affairs</option>
+            <option>Personal Experience</option>
+            <option>Business & Entrepreneurship</option>
+          </select>
+          <select className="input-field" value={difficulty} onChange={e=>setDifficulty(e.target.value)}>
+            <option>easy</option>
+            <option>medium</option>
+            <option>hard</option>
+          </select>
+          <button className="btn-primary" onClick={startSession} disabled={loading}>
+            {loading ? 'Generating Topic...' : 'Start Session'}
+          </button>
+          <button className="btn-secondary" onClick={logout}>Log Out</button>
+        </div>
       </div>
-    </div>
+    </AuthenticatedLayout>
   );
 };
 
@@ -302,9 +331,16 @@ const SessionFlow = ({ token }) => {
     });
   };
 
-  if (!session) return <div className="glass-card">Loading...</div>;
+  if (!session) {
+    return (
+      <AuthenticatedLayout>
+        <div className="glass-card">Loading...</div>
+      </AuthenticatedLayout>
+    );
+  }
 
   return (
+    <AuthenticatedLayout>
     <div className="glass-card" style={{ maxWidth: flowState === 'results' ? '1000px' : '600px', width: '95%', transition: 'max-width 0.5s ease' }}>
       <h1>
         {flowState === 'prep' ? 'Preparation' : 
@@ -518,7 +554,7 @@ const SessionFlow = ({ token }) => {
                   </ul>
                 </div>
                 <div style={{ flex: '1' }}>
-                  <h5 style={{ color: '#E57373', fontSize: '1rem', marginTop: '0', marginBottom: '0.5rem' }}>Areas to Improve</h5>
+                  <h5 style={{ color: 'var(--danger-color)', fontSize: '1rem', marginTop: '0', marginBottom: '0.5rem' }}>Areas to Improve</h5>
                   <ul className="dashboard-list red-bullets">
                     {evaluationResult.weaknesses?.map((w, i) => <li key={i}>{w}</li>)}
                   </ul>
@@ -558,6 +594,7 @@ const SessionFlow = ({ token }) => {
         </div>
       )}
     </div>
+    </AuthenticatedLayout>
   );
 };
 
@@ -588,7 +625,7 @@ const AudioVisualizer = ({ stream }) => {
       canvasCtx.clearRect(0, 0, canvas.width, canvas.height);
       
       canvasCtx.lineWidth = 2;
-      canvasCtx.strokeStyle = '#4C6FFF'; // Calm Primary color
+      canvasCtx.strokeStyle = '#6366F1';
       canvasCtx.beginPath();
 
       const sliceWidth = canvas.width * 1.0 / bufferLength;
