@@ -1,8 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useNavigate, useParams, useLocation } from 'react-router-dom';
-import { Mic } from 'lucide-react';
+import { Mic, Home, User, Settings, LogOut, TrendingUp, Clock, Activity } from 'lucide-react';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { Sidebar } from './Sidebar';
+import { NewSession } from './NewSession';
+import { SessionHistory } from './SessionHistory';
 
-const API_BASE = 'http://localhost:4000/api';
+const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:4000/api';
 
 const AppLogo = () => (
   <div className="app-logo">
@@ -53,6 +57,8 @@ const App = () => {
         <Route path="/login" element={<Login setUser={setUser} />} />
         <Route path="/signup" element={<Signup setUser={setUser} />} />
         <Route path="/" element={user ? <Dashboard user={user} setUser={setUser} /> : <Navigate to="/login" />} />
+        <Route path="/new-session" element={user ? <NewSession user={user} setUser={setUser} /> : <Navigate to="/login" />} />
+        <Route path="/history" element={user ? <SessionHistory user={user} setUser={setUser} /> : <Navigate to="/login" />} />
         <Route path="/session/:id" element={user ? <SessionFlow user={user} /> : <Navigate to="/login" />} />
       </Routes>
     </BrowserRouter>
@@ -142,62 +148,111 @@ const Signup = ({ setUser }) => {
 };
 
 const Dashboard = ({ user, setUser }) => {
-  const [category, setCategory] = useState('Technology');
-  const [difficulty, setDifficulty] = useState('medium');
-  const [loading, setLoading] = useState(false);
+  const [data, setData] = useState(null);
+  
   const navigate = useNavigate();
 
-  const startSession = async () => {
-    setLoading(true);
-    const res = await fetch(`${API_BASE}/sessions`, {
-      method: 'POST',
-      headers: { 
-        'Content-Type': 'application/json'
-      },
-      credentials: 'include',
-      body: JSON.stringify({ category, difficulty })
-    });
-    const data = await res.json();
-    setLoading(false);
-    if (data.id) {
-      navigate(`/session/${data.id}`, { state: { session: data } });
-    } else {
-      alert(data.error || 'Failed to create session');
-    }
-  };
+  useEffect(() => {
+    const fetchDashboard = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/users/${user.id}/dashboard`, { credentials: 'include' });
+        if (res.ok) {
+          setData(await res.json());
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    };
+    fetchDashboard();
+  }, [user]);
 
-  const logout = async () => {
+    const logout = async () => {
     try {
       await fetch(`${API_BASE}/auth/logout`, { method: 'POST', credentials: 'include' });
     } catch(e) {}
     setUser(null);
   };
 
+  const chartData = data?.recentSessions?.slice().reverse().map((s, i) => ({
+    name: `S${i+1}`,
+    score: s.overall_score
+  })) || [];
+
   return (
-    <AuthenticatedLayout>
-      <div className="glass-card">
-        <h1>Dashboard</h1>
-        <h2>New Session</h2>
-        <div className="flex-col">
-          <select className="input-field" value={category} onChange={e=>setCategory(e.target.value)}>
-            <option>Technology</option>
-            <option>Education</option>
-            <option>Current Affairs</option>
-            <option>Personal Experience</option>
-            <option>Business & Entrepreneurship</option>
-          </select>
-          <select className="input-field" value={difficulty} onChange={e=>setDifficulty(e.target.value)}>
-            <option>easy</option>
-            <option>medium</option>
-            <option>hard</option>
-          </select>
-          <button className="btn-primary" onClick={startSession} disabled={loading}>
-            {loading ? 'Generating Topic...' : 'Start Session'}
-          </button>
-          <button className="btn-secondary" onClick={logout}>Log Out</button>
+    <div className="dashboard-layout">
+      <Sidebar user={user} setUser={setUser} />
+
+      <div className="dashboard-main">
+        <div className="dashboard-topbar">
+          <h2>Dashboard</h2>
+          <div className="user-profile">
+            <span>{user.name}</span>
+            <div className="user-avatar">{user.name.charAt(0)}</div>
+          </div>
+        </div>
+
+        <div className="dashboard-content">
+          <div className="dashboard-grid">
+            <div className="dashboard-card" style={{ gridColumn: 'span 2' }}>
+              <div className="card-header">Ready for practice?</div>
+              <p style={{ color: 'var(--text-medium)', marginBottom: '1rem' }}>Head over to the sessions page to choose your topic and start a new impromptu speech.</p>
+              <button className="btn-primary" onClick={() => navigate('/new-session')} style={{ width: 'fit-content' }}>
+                Go to Sessions
+              </button>
+            </div>
+
+            <div className="dashboard-card">
+              <div className="card-header">Average Score <TrendingUp size={18} color="var(--primary-color)" /></div>
+              <div className="stat-value">{data?.averageScore || '0.0'}</div>
+              <p>Across {data?.totalSessions || 0} sessions</p>
+            </div>
+
+            <div className="dashboard-card" style={{ gridColumn: 'span 2' }}>
+              <div className="card-header">Progress Over Time</div>
+              <div style={{ width: '100%', height: '200px' }}>
+                {chartData.length > 0 ? (
+                  <ResponsiveContainer>
+                    <AreaChart data={chartData}>
+                      <defs>
+                        <linearGradient id="colorScore" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="var(--secondary-color)" stopOpacity={0.8}/>
+                          <stop offset="95%" stopColor="var(--secondary-color)" stopOpacity={0}/>
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" vertical={false} />
+                      <XAxis dataKey="name" stroke="#64748B" />
+                      <YAxis stroke="#64748B" domain={[0, 10]} />
+                      <Tooltip contentStyle={{ backgroundColor: 'var(--surface-color)', borderColor: 'var(--border-solid)' }} />
+                      <Area type="monotone" dataKey="score" stroke="var(--secondary-color)" strokeWidth={3} fillOpacity={1} fill="url(#colorScore)" />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="flex-center" style={{ height: '100%', color: 'var(--text-medium)' }}>Not enough data</div>
+                )}
+              </div>
+            </div>
+
+            <div className="dashboard-card">
+              <div className="card-header">Recent Activity <Clock size={18} color="var(--accent-color)" /></div>
+              <div className="recent-sessions-list">
+                {data?.recentSessions?.slice(0, 3).map((s, i) => (
+                  <div className="recent-session-item" key={i}>
+                    <div>
+                      <div className="rs-topic">{s.topic.substring(0, 30)}...</div>
+                      <div className="rs-date">{new Date(s.created_at).toLocaleDateString()}</div>
+                    </div>
+                    <div className="rs-score">{s.overall_score}/10</div>
+                  </div>
+                ))}
+                {(!data?.recentSessions || data.recentSessions.length === 0) && (
+                  <p>No recent activity.</p>
+                )}
+              </div>
+            </div>
+          </div>
         </div>
       </div>
-    </AuthenticatedLayout>
+    </div>
   );
 };
 

@@ -4,6 +4,15 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import JsonOutputParser
 
 from speech_analysis.utils import NumpyEncoder
+from pydantic import BaseModel, Field
+from typing import List
+
+class EvaluationSchema(BaseModel):
+    summary: str = Field(description="A concise summary of the speech evaluation.")
+    strengths: List[str] = Field(description="List of strengths identified in the speech.")
+    weaknesses: List[str] = Field(description="List of weaknesses or areas for improvement.")
+    improvementTips: List[str] = Field(description="List of actionable tips for the next speech.")
+    overallScore: float = Field(description="Overall score out of 10.0.")
 
 
 def _build_past_context(past_sessions: list) -> str:
@@ -53,7 +62,7 @@ def build_prompt(metrics: dict, past_sessions: list):
     Returns a LangChain ChatPromptTemplate and its variables.
     """
 
-    parser = JsonOutputParser()
+    parser = JsonOutputParser(pydantic_object=EvaluationSchema)
 
     prompt = ChatPromptTemplate.from_messages(
         [

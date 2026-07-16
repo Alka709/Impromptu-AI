@@ -1,6 +1,7 @@
 const { db } = require('../db');
 const { userPrevRecord } = require('../db/schema/evaluation');
-const { eq, desc } = require('drizzle-orm');
+const { sessions } = require('../db/schema/sessions');
+const { eq, desc, inArray } = require('drizzle-orm');
 
 const getRecentSessionRecords = async (req, res) => {
   try {
@@ -24,4 +25,80 @@ const getRecentSessionRecords = async (req, res) => {
   }
 };
 
-module.exports = { getRecentSessionRecords };
+const getDashboardData = async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    // Fetch user's evaluation records
+    const records = await db.select()
+      .from(userPrevRecord)
+      .where(eq(userPrevRecord.user_id, userId))
+      .orderBy(desc(userPrevRecord.created_at))
+      .limit(10);
+
+    const allRecords = await db.select().from(userPrevRecord).where(eq(userPrevRecord.user_id, userId));
+    const totalSessions = allRecords.length;
+    const averageScore = totalSessions > 0 ? (allRecords.reduce((acc, curr) => acc + curr.overall_score, 0) / totalSessions).toFixed(1) : 0;
+
+    const sessionIds = records.map(r => r.session_id);
+    let sessionData = [];
+    if (sessionIds.length > 0) {
+      sessionData = await db.select().from(sessions).where(inArray(sessions.id, sessionIds));
+    }
+
+    const recentSessions = records.map(r => {
+      const s = sessionData.find(session => session.id === r.session_id);
+      return {
+        ...r,
+        topic: s ? s.topic : 'Unknown Topic',
+        category: s ? s.category : 'Unknown',
+        difficulty: s ? s.difficulty : 'Unknown',
+      };
+    });
+
+    return res.status(200).json({
+      totalSessions,
+      averageScore,
+      recentSessions
+    });
+  } catch (error) {
+    console.error('Error fetching dashboard data:', error);
+    return res.status(500).json({ error: 'Failed to fetch dashboard data' });
+  }
+};
+
+
+const getSessionHistory = async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    const records = await db.select()
+      .from(userPrevRecord)
+      .where(eq(userPrevRecord.user_id, userId))
+      .orderBy(desc(userPrevRecord.created_at));
+
+    const sessionIds = records.map(r => r.session_id);
+    let sessionData = [];
+    if (sessionIds.length > 0) {
+      sessionData = await db.select().from(sessions).where(inArray(sessions.id, sessionIds));
+    }
+
+    const history = records.map(r => {
+      const s = sessionData.find(session => session.id === r.session_id);
+      return {
+        ...r,
+        topic: s ? s.topic : 'Unknown Topic',
+        category: s ? s.category : 'Unknown',
+        difficulty: s ? s.difficulty : 'Unknown',
+      };
+    });
+
+    return res.status(200).json(history);
+  } catch (error) {
+    console.error('Error fetching session history:', error);
+    return res.status(500).json({ error: 'Failed to fetch session history' });
+  }
+};
+
+module.exports = {
+  getSessionHistory, getRecentSessionRecords, getDashboardData };
