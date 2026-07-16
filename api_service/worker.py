@@ -4,9 +4,9 @@ import logging
 import tempfile
 import requests
 import subprocess
-import google.generativeai as genai
 from dotenv import load_dotenv
 
+from agents.coach_agent import CoachAgent
 from speech_analysis.metrics import extract_all_metrics
 from speech_analysis.utils import NumpyEncoder
 
@@ -15,7 +15,7 @@ load_dotenv(override=True)
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
+coach = CoachAgent()
 
 def fetch_past_sessions(user_id: str):
     """Fetch past 3 session evaluations from Express API"""
@@ -36,76 +36,6 @@ def fetch_past_sessions(user_id: str):
         print(f"DEBUG/ERROR: Error fetching past sessions: {e}")
         logger.error(f"Error fetching past sessions: {e}")
         return []
-
-def evaluate_with_gemini(metrics: dict, past_sessions: list):
-    """Use Gemini to evaluate the user's speech metrics"""
-    model = genai.GenerativeModel('gemini-3.1-flash-lite')
-    
-    past_context = ""
-    if past_sessions:
-        past_context = "User's past performance in last 3 sessions:\n"
-        for session in past_sessions:
-            weaknesses = session.get('weaknesses')
-            if isinstance(weaknesses, str):
-                try:
-                    parsed = json.loads(weaknesses)
-                    if isinstance(parsed, list):
-                        weaknesses = ", ".join(parsed)
-                except Exception:
-                    pass
-            elif isinstance(weaknesses, list):
-                weaknesses = ", ".join(weaknesses)
-
-            tips = session.get('improvement_tips')
-            if isinstance(tips, str):
-                try:
-                    parsed = json.loads(tips)
-                    if isinstance(parsed, list):
-                        tips = ", ".join(parsed)
-                except Exception:
-                    pass
-            elif isinstance(tips, list):
-                tips = ", ".join(tips)
-
-            past_context += f"- Score: {session.get('overall_score')}/10, Weaknesses: {weaknesses}, Tips: {tips}\n"
-    
-    prompt = f"""
-    You are an expert speech and communication coach. Evaluate the following speech metrics for a user's impromptu speaking session.
-    The goal is to assess their confidence, articulation, fluency, and how much less nervous/hesitant they were.
-    Be strict and provide a true, to-the-point review. Check if they are improving compared to past sessions.
-    
-    Current Session Metrics (JSON):
-    {json.dumps(metrics, cls=NumpyEncoder, indent=2)}
-    
-    {past_context}
-    
-    Return the evaluation STRICTLY as a JSON object with exactly these keys:
-    - "summary": string (overall summary of performance and improvement)
-    - "strengths": list of strings
-    - "weaknesses": list of strings
-    - "improvementTips": list of strings
-    - "overallScore": float (score out of 10)
-    
-    Ensure the output is valid JSON without any markdown formatting blocks like ```json.
-    """
-    
-    response = model.generate_content(prompt)
-    try:
-        text = response.text.strip()
-        if text.startswith("```json"):
-            text = text[7:]
-        if text.endswith("```"):
-            text = text[:-3]
-        return json.loads(text.strip())
-    except Exception as e:
-        logger.error(f"Failed to parse Gemini response: {e}. Raw response: {response.text}")
-        return {
-            "summary": "Evaluation failed to parse.",
-            "strengths": [],
-            "weaknesses": [],
-            "improvementTips": [],
-            "overallScore": 0.0
-        }
 
 def process_evaluation_job(job_data: dict):
     """Main RQ job handler for evaluating audio"""
@@ -168,7 +98,7 @@ def process_evaluation_job(job_data: dict):
         # 4. Evaluate with Gemini
         print("DEBUG: Evaluating with Gemini")
         logger.info(f"Evaluating with Gemini")
-        evaluation = evaluate_with_gemini(metrics, past_sessions)
+        evaluation = coach.evaluate(metrics, past_sessions)
         print(f"DEBUG: Gemini evaluation completed. Score: {evaluation.get('overallScore')}")
         
         # 5. Send results back to Express

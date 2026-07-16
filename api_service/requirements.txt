@@ -19,3 +19,6 @@ praat-parselmouth>=0.4.3
 pandas>=2.0.0
 tqdm>=4.65.0
 python-multipart>=0.0.6
+langchain
+langchain-core
+langchain-google-genai
