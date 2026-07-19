@@ -92,9 +92,12 @@ const AuthDivider = () => (
 );
 
 const Login = ({ setUser }) => {
+  const [step, setStep] = useState(1);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [otp, setOtp] = useState('');
   const [authError, setAuthError] = useState('');
+  const [message, setMessage] = useState('');
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -102,19 +105,14 @@ const Login = ({ setUser }) => {
     const params = new URLSearchParams(location.search);
     const err = params.get('error');
     if (err) {
-      const messages = {
-        google_oauth_failed: 'Google sign-in was cancelled or failed. Please try again.',
-        token_exchange_failed: 'Could not complete Google sign-in. Please try again.',
-        profile_fetch_failed: 'Could not retrieve your Google profile.',
-        server_error: 'A server error occurred. Please try again.',
-      };
-      setAuthError(messages[err] || 'Authentication failed. Please try again.');
+      setAuthError('Authentication failed. Please try again.');
     }
   }, [location.search]);
 
   const handleLogin = async (e) => {
     e.preventDefault();
     setAuthError('');
+    setMessage('');
     const res = await fetch(`${API_BASE}/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -122,11 +120,29 @@ const Login = ({ setUser }) => {
       credentials: 'include'
     });
     const data = await res.json();
+    if (res.ok && data.requiresOtp) {
+      setMessage(data.message);
+      setStep(2);
+    } else {
+      setAuthError(data.error || 'Login failed');
+    }
+  };
+
+  const handleVerifyOtp = async (e) => {
+    e.preventDefault();
+    setAuthError('');
+    const res = await fetch(`${API_BASE}/auth/login/verify-otp`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, otp }),
+      credentials: 'include'
+    });
+    const data = await res.json();
     if (res.ok && data.user) {
       setUser(data.user);
       navigate('/');
     } else {
-      setAuthError(data.error || 'Login failed');
+      setAuthError(data.error || 'OTP verification failed');
     }
   };
 
@@ -139,39 +155,90 @@ const Login = ({ setUser }) => {
         <h2>Welcome back</h2>
         <p style={{ color: 'var(--text-medium)', marginBottom: '1.5rem', textAlign: 'center', fontSize: '0.9rem' }}>Sign in to continue your practice</p>
 
-        {authError && (
-          <div className="auth-error-banner">{authError}</div>
+        {authError && <div className="auth-error-banner">{authError}</div>}
+        {message && <div style={{ color: 'var(--primary-color)', padding: '10px', background: '#eef2ff', borderRadius: '5px', marginBottom: '1rem', textAlign: 'center', fontSize: '0.9rem' }}>{message}</div>}
+
+        {step === 1 && (
+          <>
+            <GoogleButton />
+            <AuthDivider />
+            <form onSubmit={handleLogin} className="flex-col">
+              <input className="input-field" type="email" placeholder="Email" value={email} onChange={e=>setEmail(e.target.value)} required />
+              <input className="input-field" type="password" placeholder="Password" value={password} onChange={e=>setPassword(e.target.value)} required />
+              <button type="submit" className="btn-primary">Log In</button>
+            </form>
+            <p className="link-text" onClick={() => navigate('/signup')}>Need an account? Sign up</p>
+          </>
         )}
 
-        <GoogleButton />
-
-        <AuthDivider />
-
-        <form onSubmit={handleLogin} className="flex-col">
-          <input className="input-field" type="email" placeholder="Email" value={email} onChange={e=>setEmail(e.target.value)} required />
-          <input className="input-field" type="password" placeholder="Password" value={password} onChange={e=>setPassword(e.target.value)} required />
-          <button type="submit" className="btn-primary">Log In</button>
-        </form>
-        <p className="link-text" onClick={() => navigate('/signup')}>Need an account? Sign up</p>
+        {step === 2 && (
+          <form onSubmit={handleVerifyOtp} className="flex-col">
+            <input className="input-field" type="text" placeholder="Enter 6-digit OTP" value={otp} onChange={e=>setOtp(e.target.value)} required maxLength={6} />
+            <button type="submit" className="btn-primary">Verify & Log In</button>
+            <p className="link-text" onClick={() => setStep(1)}>Back to login</p>
+          </form>
+        )}
       </div>
     </div>
   );
 };
 
 const Signup = ({ setUser }) => {
+  const [step, setStep] = useState(1);
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
   const [name, setName] = useState('');
+  const [otp, setOtp] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [authError, setAuthError] = useState('');
+  const [message, setMessage] = useState('');
   const navigate = useNavigate();
 
-  const handleSignup = async (e) => {
+  const handleRequestOtp = async (e) => {
     e.preventDefault();
     setAuthError('');
-    const res = await fetch(`${API_BASE}/auth/signup`, {
+    setMessage('');
+    const res = await fetch(`${API_BASE}/auth/signup/request-otp`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password, name }),
+      body: JSON.stringify({ email }),
+      credentials: 'include'
+    });
+    const data = await res.json();
+    if (res.ok) {
+      setMessage(data.message);
+      setStep(2);
+    } else {
+      setAuthError(data.error || 'Failed to request OTP');
+    }
+  };
+
+  const handleVerifyOtp = async (e) => {
+    e.preventDefault();
+    setAuthError('');
+    setMessage('');
+    const res = await fetch(`${API_BASE}/auth/signup/verify-otp`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, otp }),
+      credentials: 'include'
+    });
+    const data = await res.json();
+    if (res.ok) {
+      setMessage(data.message);
+      setStep(3);
+    } else {
+      setAuthError(data.error || 'OTP verification failed');
+    }
+  };
+
+  const handleCompleteSignup = async (e) => {
+    e.preventDefault();
+    setAuthError('');
+    const res = await fetch(`${API_BASE}/auth/signup/complete`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, name, password, confirmPassword }),
       credentials: 'include'
     });
     const data = await res.json();
@@ -192,21 +259,38 @@ const Signup = ({ setUser }) => {
         <h2>Create account</h2>
         <p style={{ color: 'var(--text-medium)', marginBottom: '1.5rem', textAlign: 'center', fontSize: '0.9rem' }}>Start your public speaking journey</p>
 
-        {authError && (
-          <div className="auth-error-banner">{authError}</div>
+        {authError && <div className="auth-error-banner">{authError}</div>}
+        {message && <div style={{ color: 'var(--primary-color)', padding: '10px', background: '#eef2ff', borderRadius: '5px', marginBottom: '1rem', textAlign: 'center', fontSize: '0.9rem' }}>{message}</div>}
+
+        {step === 1 && (
+          <>
+            <GoogleButton />
+            <AuthDivider />
+            <form onSubmit={handleRequestOtp} className="flex-col">
+              <input className="input-field" type="email" placeholder="Email Address" value={email} onChange={e=>setEmail(e.target.value)} required />
+              <button type="submit" className="btn-primary">Send OTP</button>
+            </form>
+            <p className="link-text" onClick={() => navigate('/login')}>Already have an account? Log in</p>
+          </>
         )}
 
-        <GoogleButton />
+        {step === 2 && (
+          <form onSubmit={handleVerifyOtp} className="flex-col">
+            <p style={{textAlign: 'center', fontSize: '0.9rem'}}>An OTP has been sent to {email}</p>
+            <input className="input-field" type="text" placeholder="Enter 6-digit OTP" value={otp} onChange={e=>setOtp(e.target.value)} required maxLength={6} />
+            <button type="submit" className="btn-primary">Verify Email</button>
+            <p className="link-text" onClick={() => setStep(1)}>Back</p>
+          </form>
+        )}
 
-        <AuthDivider />
-
-        <form onSubmit={handleSignup} className="flex-col">
-          <input className="input-field" type="text" placeholder="Full Name" value={name} onChange={e=>setName(e.target.value)} required />
-          <input className="input-field" type="email" placeholder="Email" value={email} onChange={e=>setEmail(e.target.value)} required />
-          <input className="input-field" type="password" placeholder="Password" value={password} onChange={e=>setPassword(e.target.value)} required />
-          <button type="submit" className="btn-primary">Create Account</button>
-        </form>
-        <p className="link-text" onClick={() => navigate('/login')}>Already have an account? Log in</p>
+        {step === 3 && (
+          <form onSubmit={handleCompleteSignup} className="flex-col">
+            <input className="input-field" type="text" placeholder="Full Name" value={name} onChange={e=>setName(e.target.value)} required />
+            <input className="input-field" type="password" placeholder="Password" value={password} onChange={e=>setPassword(e.target.value)} required />
+            <input className="input-field" type="password" placeholder="Confirm Password" value={confirmPassword} onChange={e=>setConfirmPassword(e.target.value)} required />
+            <button type="submit" className="btn-primary">Complete Account Setup</button>
+          </form>
+        )}
       </div>
     </div>
   );
