@@ -26,6 +26,7 @@ class TopicRequest(BaseModel):
 class EvalRequest(BaseModel):
     sessionId: str
     userId: str
+    topic: str
     audioDownloadUrl: str
     reportCallbackUrl: str
 

@@ -6,7 +6,7 @@ import requests
 import subprocess
 from dotenv import load_dotenv
 
-from agents.coach_agent import CoachAgent
+from agents.evaluation_pipeline import EvaluationPipeline
 from speech_analysis.metrics import extract_all_metrics
 from speech_analysis.utils import NumpyEncoder
 
@@ -15,7 +15,7 @@ load_dotenv(override=True)
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-coach = CoachAgent()
+pipeline = EvaluationPipeline()
 
 def fetch_past_sessions(user_id: str):
     """Fetch past 3 session evaluations from Express API"""
@@ -41,6 +41,7 @@ def process_evaluation_job(job_data: dict):
     """Main RQ job handler for evaluating audio"""
     session_id = job_data.get('sessionId')
     user_id = job_data.get('userId')
+    topic = job_data.get("topic", "")
     audio_url = job_data.get('audioDownloadUrl')
     callback_url = job_data.get('reportCallbackUrl')
 
@@ -86,7 +87,12 @@ def process_evaluation_job(job_data: dict):
         
         # 4. Evaluate with Gemini
         logger.info(f"Evaluating with Gemini")
-        evaluation = coach.evaluate(metrics, past_sessions)
+        evaluation = pipeline.evaluate(
+            metrics=metrics,
+            topic=topic,
+            history=past_sessions,
+        )
+        logger.info(f"Gemini evaluation completed. Score: {evaluation.get('overallScore')}")
         
         # 5. Send results back to Express
         payload = {

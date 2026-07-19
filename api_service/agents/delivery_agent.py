@@ -3,19 +3,19 @@ import logging
 from langchain_core.output_parsers import JsonOutputParser
 
 from ai.llm import get_llm
-from prompts.coach_prompt import build_prompt
+from prompts.delivery_prompt import build_prompt
 
 logger = logging.getLogger(__name__)
 
 
-class CoachAgent:
+class DeliveryAgent:
     def __init__(self):
         self.llm = get_llm()
         self.parser = JsonOutputParser()
 
-    def evaluate(self, metrics: dict, past_sessions: list) -> dict:
+    def evaluate(self, delivery_metrics: dict) -> dict:
         try:
-            prompt, variables = build_prompt(metrics, past_sessions)
+            prompt, variables = build_prompt(delivery_metrics)
 
             chain = prompt | self.llm | self.parser
 
@@ -24,12 +24,11 @@ class CoachAgent:
             return response
 
         except Exception as e:
-            logger.exception("Failed to evaluate speech with LangChain")
+            logger.exception("Failed to evaluate delivery with LangChain")
 
             return {
-                "summary": "Evaluation failed to parse.",
+                "deliveryScore": 0.0,
                 "strengths": [],
                 "weaknesses": [],
-                "improvementTips": [],
-                "overallScore": 0.0,
+                "feedback": "Delivery evaluation failed to parse.",
             }

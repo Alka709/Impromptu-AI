@@ -56,6 +56,7 @@ const uploadAudio = async (req, res) => {
     const fastApiPayload = {
       sessionId: sessionId,
       userId: userId,
+      topic: existingSession[0].topic,
       audioDownloadUrl: presignedUrl,
       reportCallbackUrl: `http://localhost:${process.env.PORT || 4000}/api/webhooks/evaluation-result`
     };
