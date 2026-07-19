@@ -2,7 +2,33 @@
 
 Mypromptu is a platform designed to help users improve their impromptu speaking skills through AI-driven topic generation, audio recording, and detailed speech analysis. It uses a modern tech stack encompassing Node.js, Express, React, PostgreSQL, FastAPI, and Redis.
 
-## How to Start the Project (Proper Order)
+## How to Run via Docker (Recommended)
+
+The easiest way to run the entire stack (Frontend, Backend, AI-Service, AI-Worker, and Redis) is using Docker Compose. 
+Simply open a terminal in the root directory and run:
+
+```bash
+docker-compose up -d --build
+```
+
+You can then access the services at:
+- **Frontend UI:** [http://localhost:5173](http://localhost:5173)
+- **Backend API:** [http://localhost:4000](http://localhost:4000)
+- **AI Service:** [http://localhost:8000](http://localhost:8000)
+
+To view live logs from all services, run:
+```bash
+docker-compose logs -f
+```
+
+To shut everything down, run:
+```bash
+docker-compose down
+```
+
+---
+
+## How to Start the Project (Local/Native Setup)
 
 This project consists of multiple services that need to run concurrently. Follow these steps in order:
 
