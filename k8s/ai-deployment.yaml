@@ -1,0 +1,70 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ai-deployment
+  namespace: impromptu-ai
+  labels:
+    app.kubernetes.io/name: ai-service
+    app.kubernetes.io/part-of: impromptu-ai
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: ai-service
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: ai-service
+    spec:
+      containers:
+        - name: ai-service
+          # Replace with your actual registry/image in production (e.g., registry.example.com/ai-service:latest)
+          image: ai-service:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8000
+          env:
+            - name: REDIS_PORT
+              value: "6379"
+            - name: BACKEND_INTERNAL_URL
+              value: "http://backend-service:3000"
+          envFrom:
+            - configMapRef:
+                name: impromptu-config
+            - secretRef:
+                name: impromptu-secret
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "512Mi"
+            limits:
+              cpu: "1000m"
+              memory: "1Gi"
+          startupProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            failureThreshold: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          securityContext:
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: false # Required by Whisper/FFmpeg to write temp files, unless emptyDir is used.
+            # To make it strictly readOnlyRootFilesystem: true, you'd mount an emptyDir at the required path.

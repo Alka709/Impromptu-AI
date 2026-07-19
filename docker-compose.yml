@@ -1,0 +1,92 @@
+version: '3.8'
+
+services:
+  frontend:
+    build:
+      context: ./frontend
+    ports:
+      - "5173:8080"
+    volumes:
+      - ./frontend/src:/app/src
+    environment:
+      - VITE_API_BASE=http://localhost:4000/api
+    networks:
+      - impromptu-network
+    depends_on:
+      - backend
+
+  backend:
+    build:
+      context: ./backend
+    ports:
+      - "4000:4000"
+    volumes:
+      - ./backend/src:/app/src
+    environment:
+      - NODE_ENV=development
+      - PORT=4000
+      - AI_SERVICE_URL=http://ai-service:8000
+      - REDIS_URL=redis://redis:6379
+      - BACKEND_CALLBACK_URL=http://backend:4000
+      # Database and S3 configurations should be passed via .env file or environment variables
+    env_file:
+      - ./backend/.env
+    networks:
+      - impromptu-network
+    depends_on:
+      - ai-service
+      - redis
+
+  ai-service:
+    build:
+      context: ./api_service
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./api_service:/app
+      - hf_cache:/home/appuser/.cache/huggingface
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - BACKEND_INTERNAL_URL=http://backend:4000
+    env_file:
+      - ./api_service/.env
+    networks:
+      - impromptu-network
+    depends_on:
+      - redis
+
+  ai-worker:
+    build:
+      context: ./api_service
+    command: ["rq", "worker", "--worker-class", "rq.SimpleWorker", "-u", "redis://redis:6379"]
+    volumes:
+      - ./api_service:/app
+      - hf_cache:/home/appuser/.cache/huggingface
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - BACKEND_INTERNAL_URL=http://backend:4000
+    env_file:
+      - ./api_service/.env
+    networks:
+      - impromptu-network
+    depends_on:
+      - redis
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6380:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - impromptu-network
+
+networks:
+  impromptu-network:
+    driver: bridge
+
+volumes:
+  redis_data:
+  hf_cache:

@@ -52,17 +52,20 @@ const uploadAudio = async (req, res) => {
       .set({ audio_url: audioUrl })
       .where(eq(sessions.id, sessionId));
 
+    const backendCallbackUrl = process.env.BACKEND_CALLBACK_URL || `http://localhost:${process.env.PORT || 4000}`;
+    const aiServiceUrl = process.env.AI_SERVICE_URL || 'http://localhost:8000';
+
     // Call FastAPI to enqueue the job
     const fastApiPayload = {
       sessionId: sessionId,
       userId: userId,
       topic: existingSession[0].topic,
       audioDownloadUrl: presignedUrl,
-      reportCallbackUrl: `http://localhost:${process.env.PORT || 4000}/api/webhooks/evaluation-result`
+      reportCallbackUrl: `${backendCallbackUrl}/api/webhooks/evaluation-result`
     };
 
     try {
-      await fetch('http://localhost:8000/api/evaluate/enqueue', {
+      await fetch(`${aiServiceUrl}/api/evaluate/enqueue`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(fastApiPayload)

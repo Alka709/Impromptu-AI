@@ -12,7 +12,9 @@ load_dotenv(override=True)
 app = FastAPI()
 
 # Setup Redis and RQ
-redis_conn = Redis(host='localhost', port=6379)
+redis_host = os.getenv("REDIS_HOST", "localhost")
+redis_port = int(os.getenv("REDIS_PORT", 6379))
+redis_conn = Redis(host=redis_host, port=redis_port)
 q = Queue(connection=redis_conn)
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")

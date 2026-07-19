@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: impromptu-config
+  namespace: impromptu-ai
+  labels:
+    app.kubernetes.io/part-of: impromptu-ai
+data:
+  # Node/Backend env vars
+  NODE_ENV: "production"
+  PORT: "3000"
+  
+  # Service Discovery URLs
+  # Internal DNS format: <service-name>.<namespace>.svc.cluster.local
+  AI_SERVICE_URL: "http://ai-service.impromptu-ai.svc.cluster.local:8000"
+  BACKEND_CALLBACK_URL: "http://backend-service.impromptu-ai.svc.cluster.local:3000"
+  REDIS_HOST: "redis-service.impromptu-ai.svc.cluster.local"
+  REDIS_PORT: "6379"
+  # Optional: For Node.js/Backend accessing Redis directly if needed
+  REDIS_URL: "redis://redis-service.impromptu-ai.svc.cluster.local:6379"
