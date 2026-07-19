@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ../backend
+    ports:
+      - "4000:4000"
+    environment:
+      - NODE_ENV=production
+      - PORT=4000
+      - REDIS_URL=redis://redis:6379
+      # Note: AI_SERVICE_URL and BACKEND_CALLBACK_URL should be overridden via the .env file 
+      # on the EC2 instance to point to the correct public/private IPs.
+    env_file:
+      - ../backend/.env
+    networks:
+      - backend-network
+    depends_on:
+      - redis
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379" # Exposed so the AI EC2 instance can connect via Private IP
+    volumes:
+      - redis_data:/data
+    networks:
+      - backend-network
+    restart: unless-stopped
+
+networks:
+  backend-network:
+    driver: bridge
+
+volumes:
+  redis_data:

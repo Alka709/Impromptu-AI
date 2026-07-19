@@ -97,6 +97,5 @@ const sendOtpEmail = async (toEmail, otp) => {
 
 module.exports = {
   sendWelcomeEmail,
-  sendLoginNotificationEmail,
   sendOtpEmail
 };

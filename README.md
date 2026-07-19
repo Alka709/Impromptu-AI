@@ -56,9 +56,9 @@ npm run dev
 *(Runs on port 5173 by default)*
 
 ### 4. Python AI Service (FastAPI)
-Open a new terminal and navigate to the `api_service` directory:
+Open a new terminal and navigate to the `ai_service` directory:
 ```bash
-cd api_service
+cd ai_service
 # Create and activate a virtual environment
 py -m venv venv
 venv\Scripts\activate
@@ -69,12 +69,12 @@ pip install -r requirements.txt
 # Start the FastAPI server
 uvicorn main:app --reload
 ```
-*(Runs on port 8000. Requires `.env` in the `api_service` folder with `GEMINI_API_KEY` and `EXPRESS_PORT`)*
+*(Runs on port 8000. Requires `.env` in the `ai_service` folder with `GEMINI_API_KEY` and `EXPRESS_PORT`)*
 
 ### 5. Background Job Worker (RQ)
-Open a **final new terminal**, navigate to `api_service`, activate the virtual environment, and start the worker. **For Windows, you must use the SimpleWorker class**:
+Open a **final new terminal**, navigate to `ai_service`, activate the virtual environment, and start the worker. **For Windows, you must use the SimpleWorker class**:
 ```bash
-cd api_service
+cd ai_service
 venv\Scripts\activate
 
 # Start the worker (Windows compatible)
@@ -99,7 +99,7 @@ Allows logged-in users to create a session and generate a unique speech topic us
 
 **Components:**
 - **Node.js/Express Backend:** Handles session creation, saves to PostgreSQL.
-- **Python/FastAPI Service (`api_service/`):** Dedicated AI microservice integrating with the `google-generativeai` SDK.
+- **Python/FastAPI Service (`ai_service/`):** Dedicated AI microservice integrating with the `google-generativeai` SDK.
 
 **Endpoints (Node.js):**
 - `POST http://localhost:4000/api/sessions` - Requires JWT token. JSON Body expects `category` and `difficulty`. Returns session data with the generated AI topic.

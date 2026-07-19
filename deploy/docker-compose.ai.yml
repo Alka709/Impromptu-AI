@@ -1,0 +1,42 @@
+version: '3.8'
+
+services:
+  ai-service:
+    build:
+      context: ../ai_service
+    ports:
+      - "8000:8000"
+    volumes:
+      - hf_cache:/home/appuser/.cache/huggingface
+    environment:
+      # Note: REDIS_HOST and BACKEND_INTERNAL_URL should be overridden via the .env file 
+      # on this EC2 instance to point to the Private IP of the Backend EC2 instance.
+      - REDIS_PORT=6379
+    env_file:
+      - ../ai_service/.env
+    networks:
+      - ai-network
+    restart: unless-stopped
+
+  ai-worker:
+    build:
+      context: ../ai_service
+    # The worker connects directly to the Redis instance on the Backend EC2.
+    # REDIS_HOST from the .env file must be the Private IP of the Backend EC2.
+    command: ["sh", "-c", "rq worker --worker-class rq.SimpleWorker -u redis://$${REDIS_HOST}:6379"]
+    volumes:
+      - hf_cache:/home/appuser/.cache/huggingface
+    environment:
+      - REDIS_PORT=6379
+    env_file:
+      - ../ai_service/.env
+    networks:
+      - ai-network
+    restart: unless-stopped
+
+networks:
+  ai-network:
+    driver: bridge
+
+volumes:
+  hf_cache:

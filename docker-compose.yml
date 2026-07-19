@@ -39,18 +39,18 @@ services:
 
   ai-service:
     build:
-      context: ./api_service
+      context: ./ai_service
     ports:
       - "8000:8000"
     volumes:
-      - ./api_service:/app
+      - ./ai_service:/app
       - hf_cache:/home/appuser/.cache/huggingface
     environment:
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - BACKEND_INTERNAL_URL=http://backend:4000
     env_file:
-      - ./api_service/.env
+      - ./ai_service/.env
     networks:
       - impromptu-network
     depends_on:
@@ -58,17 +58,17 @@ services:
 
   ai-worker:
     build:
-      context: ./api_service
+      context: ./ai_service
     command: ["rq", "worker", "--worker-class", "rq.SimpleWorker", "-u", "redis://redis:6379"]
     volumes:
-      - ./api_service:/app
+      - ./ai_service:/app
       - hf_cache:/home/appuser/.cache/huggingface
     environment:
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - BACKEND_INTERNAL_URL=http://backend:4000
     env_file:
-      - ./api_service/.env
+      - ./ai_service/.env
     networks:
       - impromptu-network
     depends_on:

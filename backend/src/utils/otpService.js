@@ -1,9 +1,8 @@
 const Redis = require('ioredis');
 
 // Connect to Redis (used for OTP storage)
-// BullMQ is already using ioredis, so we can reuse the same REDIS_HOST settings
 const redis = new Redis({
-  host: process.env.REDIS_HOST || '127.0.0.1',
+  host: process.env.REDIS_HOST || 'redis',
   port: parseInt(process.env.REDIS_PORT || '6379'),
   maxRetriesPerRequest: null,
 });

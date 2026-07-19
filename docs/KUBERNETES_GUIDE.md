@@ -19,7 +19,7 @@ We use **multi-stage builds** in our Dockerfiles to keep image sizes small.
 `docker-compose.yml` orchestrates all our services locally. 
 
 **How to deploy locally:**
-1. Create `.env` files in `frontend`, `backend`, and `api_service` based on their respective examples.
+1. Create `.env` files in `frontend`, `backend`, and `ai_service` based on their respective examples.
 2. Run `docker-compose up --build -d`.
 3. The services will communicate over the internal `impromptu-network`.
 
@@ -73,7 +73,7 @@ docker push your-registry/frontend:latest
 docker build -t your-registry/backend:latest ./backend
 docker push your-registry/backend:latest
 
-docker build -t your-registry/ai-service:latest ./api_service
+docker build -t your-registry/ai-service:latest ./ai_service
 docker push your-registry/ai-service:latest
 ```
 *(Remember to update the `image:` fields in the `k8s/*-deployment.yaml` files with your registry paths).*
