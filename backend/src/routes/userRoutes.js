@@ -4,7 +4,8 @@ const authMiddleware = require('../middleware/authMiddleware');
 
 const router = express.Router();
 
-router.get('/:userId/sessions/recent', getRecentSessionRecords);
-router.get('/:userId/dashboard', authMiddleware, getDashboardData, getSessionHistory);
+router.get('/:userId/sessions/recent', authMiddleware, getRecentSessionRecords);
+router.get('/:userId/dashboard', authMiddleware, getDashboardData);
+router.get('/:userId/history', authMiddleware, getSessionHistory);
 
 module.exports = router;

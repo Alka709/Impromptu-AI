@@ -1,5 +1,6 @@
 const { db } = require('../db');
 const { userPrevRecord, metricesCalculated } = require('../db/schema/evaluation');
+const { eq } = require('drizzle-orm');
 
 const handleEvaluationResult = async (req, res) => {
   try {
@@ -16,6 +17,17 @@ const handleEvaluationResult = async (req, res) => {
 
     if (!userId || !sessionId) {
       return res.status(400).json({ error: 'Missing userId or sessionId' });
+    }
+
+    // Idempotency check — if this session's report already exists, treat this as a
+    // duplicate delivery (e.g. a retried webhook call) and no-op rather than inserting again.
+    const existing = await db.select()
+      .from(userPrevRecord)
+      .where(eq(userPrevRecord.session_id, sessionId))
+      .limit(1);
+
+    if (existing.length > 0) {
+      return res.status(200).json({ message: 'Already processed' });
     }
 
     // Save report

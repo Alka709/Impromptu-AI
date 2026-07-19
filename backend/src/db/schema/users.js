@@ -6,7 +6,10 @@ const users = pgTable('users', {
   id: uuid('id').primaryKey().defaultRandom(),
   email: text('email').notNull().unique(),
   name: text('name').notNull(),
-  password_hash: text('password_hash').notNull(),
+  // nullable so Google-OAuth users don't need a password
+  password_hash: text('password_hash'),
+  // google_id for OAuth-linked accounts
+  google_id: text('google_id').unique(),
   created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updated_at: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });

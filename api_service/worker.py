@@ -107,7 +107,11 @@ def process_evaluation_job(job_data: dict):
         }
         
         logger.info(f"Sending results to webhook: {callback_url}")
-        webhook_res = requests.post(callback_url, json=payload)
+        webhook_res = requests.post(
+            callback_url,
+            json=payload,
+            headers={"X-Internal-Service-Key": os.environ["INTERNAL_SERVICE_KEY"]}
+        )
         webhook_res.raise_for_status()
         
         logger.info(f"Job completed successfully for session {session_id}")
