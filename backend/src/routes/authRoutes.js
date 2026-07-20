@@ -5,13 +5,10 @@ const { redirectToGoogle, handleGoogleCallback } = require('../controllers/googl
 const authMiddleware = require('../middleware/authMiddleware');
 
 // Signup Flow
-router.post('/signup/request-otp', authController.signupRequestOtp);
-router.post('/signup/verify-otp', authController.signupVerifyOtp);
-router.post('/signup/complete', authController.signupComplete);
+router.post('/signup', authController.signup);
 
 // Login Flow
-router.post('/login', authController.loginRequestOtp);
-router.post('/login/verify-otp', authController.loginVerifyOtp);
+router.post('/login', authController.login);
 
 router.post('/logout', authController.logout);
 router.get('/me', authMiddleware, authController.me);

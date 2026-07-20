@@ -1,21 +1,14 @@
 import os
 import google.generativeai as genai
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, BackgroundTasks
 from pydantic import BaseModel
 from dotenv import load_dotenv
-from redis import Redis
-from rq import Queue
 from worker import process_evaluation_job
+import json
 
 load_dotenv(override=True)
 
 app = FastAPI()
-
-# Setup Redis and RQ
-redis_host = os.getenv("REDIS_HOST", "localhost")
-redis_port = int(os.getenv("REDIS_PORT", 6379))
-redis_conn = Redis(host=redis_host, port=redis_port)
-q = Queue(connection=redis_conn)
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 if GEMINI_API_KEY:
@@ -32,7 +25,6 @@ class EvalRequest(BaseModel):
     audioDownloadUrl: str
     reportCallbackUrl: str
 
-import json
 
 @app.post("/generate_topic")
 async def generate_topic(request: TopicRequest):
@@ -77,13 +69,13 @@ async def generate_topic(request: TopicRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/evaluate/enqueue")
-async def enqueue_evaluation(request: EvalRequest):
+async def enqueue_evaluation(request: EvalRequest, background_tasks: BackgroundTasks):
     try:
-        job = q.enqueue(process_evaluation_job, request.dict())
-        return {"message": "Job enqueued", "job_id": job.id}
+        background_tasks.add_task(process_evaluation_job, request.dict())
+        return {"message": "Job enqueued natively", "job_id": request.sessionId}
     except Exception as e:
         print(f"Failed to enqueue job: {e}")
-        raise HTTPException(status_code=500, detail="Could not enqueue job to RQ")
+        raise HTTPException(status_code=500, detail="Could not enqueue job natively")
 
 @app.get("/health")
 def health_check():

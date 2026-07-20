@@ -187,6 +187,7 @@ const handleGoogleCallback = async (req, res) => {
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
       maxAge: 24 * 60 * 60 * 1000, // 1 day
+      path: '/'
     });
 
     // ── 2e. Redirect back to frontend dashboard ───────────────────────────────

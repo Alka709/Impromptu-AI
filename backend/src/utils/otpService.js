@@ -1,11 +1,5 @@
-const Redis = require('ioredis');
-
-// Connect to Redis (used for OTP storage)
-const redis = new Redis({
-  host: process.env.REDIS_HOST || 'redis',
-  port: parseInt(process.env.REDIS_PORT || '6379'),
-  maxRetriesPerRequest: null,
-});
+// In-memory store for development/testing without Redis
+const memoryStore = {};
 
 /**
  * Generate a random 6-digit OTP
@@ -15,43 +9,45 @@ const generateOtp = () => {
 };
 
 /**
- * Stores an OTP in Redis with an expiration time
- * @param {string} prefix - e.g. "signup_otp" or "login_otp"
- * @param {string} email - The user's email
- * @param {string} otp - The 6 digit code
- * @param {number} expiresInSeconds - Expiration time (default 5 mins)
+ * Stores an OTP in memory with an expiration time
  */
 const storeOtp = async (prefix, email, otp, expiresInSeconds = 300) => {
   const key = `${prefix}:${email}`;
-  await redis.setex(key, expiresInSeconds, otp);
+  memoryStore[key] = {
+    value: otp,
+    expiresAt: Date.now() + expiresInSeconds * 1000
+  };
 };
 
 /**
- * Validates an OTP from Redis
- * @param {string} prefix - e.g. "signup_otp" or "login_otp"
- * @param {string} email - The user's email
- * @param {string} otp - The 6 digit code provided by the user
- * @returns {boolean} - true if valid, false if invalid or expired
+ * Validates an OTP from memory
  */
 const validateOtp = async (prefix, email, otp) => {
   const key = `${prefix}:${email}`;
-  const storedOtp = await redis.get(key);
+  const record = memoryStore[key];
   
-  if (storedOtp && storedOtp === otp) {
+  if (record && record.value === otp && record.expiresAt > Date.now()) {
     // Delete OTP after successful use to prevent reuse
-    await redis.del(key);
+    delete memoryStore[key];
     return true;
   }
+  
+  if (record && record.expiresAt <= Date.now()) {
+    delete memoryStore[key];
+  }
+  
   return false;
 };
 
 /**
- * Sets a temporary approval flag (e.g. after verifying email for signup, 
- * gives them 15 mins to enter their password)
+ * Sets a temporary approval flag
  */
 const setTemporaryApproval = async (prefix, email, expiresInSeconds = 900) => {
   const key = `${prefix}:${email}`;
-  await redis.setex(key, expiresInSeconds, 'true');
+  memoryStore[key] = {
+    value: 'true',
+    expiresAt: Date.now() + expiresInSeconds * 1000
+  };
 };
 
 /**
@@ -59,11 +55,17 @@ const setTemporaryApproval = async (prefix, email, expiresInSeconds = 900) => {
  */
 const checkTemporaryApproval = async (prefix, email) => {
   const key = `${prefix}:${email}`;
-  const value = await redis.get(key);
-  if (value === 'true') {
-    await redis.del(key); // consume it
+  const record = memoryStore[key];
+  
+  if (record && record.value === 'true' && record.expiresAt > Date.now()) {
+    delete memoryStore[key]; // consume it
     return true;
   }
+  
+  if (record && record.expiresAt <= Date.now()) {
+    delete memoryStore[key];
+  }
+  
   return false;
 };
 

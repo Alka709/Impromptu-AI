@@ -27,7 +27,11 @@ def fetch_past_sessions(user_id: str):
             express_port = os.environ.get("EXPRESS_PORT", "4000")
             url = f"http://localhost:{express_port}/api/users/{user_id}/sessions/recent"
         logger.info(f"Fetching past sessions from {url}")
-        response = requests.get(url)
+        headers = {}
+        service_key = os.environ.get("INTERNAL_SERVICE_KEY")
+        if service_key:
+            headers["X-Internal-Service-Key"] = service_key
+        response = requests.get(url, headers=headers)
         if response.status_code == 200:
             data = response.json()
             return data
