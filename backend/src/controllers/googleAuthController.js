@@ -14,6 +14,7 @@ const jwt = require('jsonwebtoken');
 const { eq, or } = require('drizzle-orm');
 const { db } = require('../db');
 const { users } = require('../db/schema/users');
+const { normalizeEmail } = require('../utils/normalizeEmail');
 
 const CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 const CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
@@ -122,6 +123,7 @@ const handleGoogleCallback = async (req, res) => {
     }
 
     const { id: googleId, email, name, verified_email } = googleUser;
+    const normalizedEmail = normalizeEmail(email);
 
     // ── 2c. Upsert user: find by google_id OR email ──────────────────────────
     let user;
@@ -138,14 +140,14 @@ const handleGoogleCallback = async (req, res) => {
       const existingByEmail = await db
         .select()
         .from(users)
-        .where(eq(users.email, email));
+        .where(eq(users.email, normalizedEmail));
 
       if (existingByEmail.length > 0) {
         // Link Google to existing account
         const [updated] = await db
           .update(users)
           .set({ google_id: googleId, updated_at: new Date() })
-          .where(eq(users.email, email))
+          .where(eq(users.email, normalizedEmail))
           .returning({
             id: users.id,
             email: users.email,
@@ -159,8 +161,8 @@ const handleGoogleCallback = async (req, res) => {
         const [newUser] = await db
           .insert(users)
           .values({
-            email,
-            name: name || email.split('@')[0],
+            email: normalizedEmail,
+            name: name || normalizedEmail.split('@')[0],
             password_hash: null, // Google users have no password
             google_id: googleId,
           })
@@ -187,7 +189,6 @@ const handleGoogleCallback = async (req, res) => {
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
       maxAge: 24 * 60 * 60 * 1000, // 1 day
-      path: '/'
     });
 
     // ── 2e. Redirect back to frontend dashboard ───────────────────────────────
