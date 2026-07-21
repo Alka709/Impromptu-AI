@@ -93,15 +93,17 @@ export default function DashboardScreen() {
               {dashboardData.recentSessions && dashboardData.recentSessions.length > 0 ? (
                 <div className="grid gap-4">
                   {dashboardData.recentSessions.map(session => (
-                    <Link key={session.id} to={`/session/${session.session_id}`} className="bg-white rounded-xl border border-zinc-100 p-6 flex justify-between items-center hover:border-indigo-300 hover:shadow-md transition-all group">
-                      <div>
-                        <div className="flex items-center gap-3 mb-1">
-                          <h4 className="font-bold text-zinc-900 text-lg group-hover:text-indigo-700 transition-colors">{session.topic}</h4>
-                          <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-zinc-100 text-zinc-500">{session.category}</span>
+                    <Link key={session.id} to={`/session/${session.session_id}`} className="bg-white rounded-xl border border-zinc-100 p-6 flex justify-between items-center gap-4 hover:border-indigo-300 hover:shadow-md transition-all group">
+                      <div className="flex-1 min-w-0 pr-2">
+                        <div className="flex flex-col gap-2 mb-2">
+                          <div className="flex">
+                            <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-zinc-100 text-zinc-500 shrink-0">{session.category}</span>
+                          </div>
+                          <h4 className="font-bold text-zinc-900 text-lg group-hover:text-indigo-700 transition-colors break-words leading-snug">{session.topic}</h4>
                         </div>
-                        <p className="text-sm text-zinc-500">{new Date(session.created_at).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })} • Score: <span className="font-bold text-zinc-700">{session.overall_score}/10</span></p>
+                        <p className="text-sm text-zinc-500 truncate">{new Date(session.created_at).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })} • Score: <span className="font-bold text-zinc-700">{session.overall_score}/10</span></p>
                       </div>
-                      <div className="w-10 h-10 rounded-full bg-zinc-50 flex items-center justify-center group-hover:bg-indigo-50 transition-colors">
+                      <div className="w-10 h-10 rounded-full bg-zinc-50 flex items-center justify-center group-hover:bg-indigo-50 transition-colors shrink-0">
                         <span className="text-zinc-400 group-hover:text-indigo-600 font-bold">→</span>
                       </div>
                     </Link>
