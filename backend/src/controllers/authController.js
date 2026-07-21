@@ -13,13 +13,23 @@ const { isGmailEmail, isValidPassword } = require('../validators/authValidator')
 // SIGNUP FLOW
 // ==========================================
 
+const { z } = require('zod');
+
+const signupSchema = z.object({
+  email: z.string({ required_error: 'All fields are required' }).min(1, 'All fields are required'),
+  name: z.string({ required_error: 'All fields are required' }).min(1, 'All fields are required'),
+  password: z.string({ required_error: 'All fields are required' }).min(1, 'All fields are required'),
+  confirmPassword: z.string({ required_error: 'All fields are required' }).min(1, 'All fields are required'),
+});
+
 const signup = async (req, res) => {
   try {
-    const { email, name, password, confirmPassword } = req.body;
-    if (!email || !name || !password || !confirmPassword) {
-      return res.status(400).json({ error: 'All fields are required' });
+    const parsedBody = signupSchema.safeParse(req.body);
+    if (!parsedBody.success) {
+      return res.status(400).json({ error: parsedBody.error.errors[0].message });
     }
 
+    const { email, name, password, confirmPassword } = parsedBody.data;
     const normalizedEmail = normalizeEmail(email);
 
     if (!isGmailEmail(normalizedEmail)) {
@@ -76,12 +86,19 @@ const signup = async (req, res) => {
 // LOGIN FLOW
 // ==========================================
 
+const loginSchema = z.object({
+  email: z.string({ required_error: 'Email and password required' }).min(1, 'Email and password required'),
+  password: z.string({ required_error: 'Email and password required' }).min(1, 'Email and password required'),
+});
+
 const login = async (req, res) => {
   try {
-    const { email, password } = req.body;
-    if (!email || !password) return res.status(400).json({ error: 'Email and password required' });
+    const parsedBody = loginSchema.safeParse(req.body);
+    if (!parsedBody.success) {
+      return res.status(400).json({ error: parsedBody.error.errors[0].message });
+    }
 
-    
+    const { email, password } = parsedBody.data;
     const normalizedEmail = normalizeEmail(email);
 
     const foundUsers = await db

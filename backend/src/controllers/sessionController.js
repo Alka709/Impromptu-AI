@@ -4,6 +4,8 @@ const { userPrevRecord, metricesCalculated } = require('../db/schema/evaluation'
 const { eq } = require('drizzle-orm');
 const logger = require('../telemetry/logger');
 
+const { z } = require('zod');
+
 const validCategories = [
   'Technology',
   'Education',
@@ -14,32 +16,28 @@ const validCategories = [
 
 const validDifficulties = ['easy', 'medium', 'hard'];
 
+const createSessionSchema = z.object({
+  category: z.enum(validCategories, {
+    errorMap: () => ({ message: 'Invalid category.' })
+  }),
+  difficulty: z.enum(validDifficulties, {
+    errorMap: () => ({ message: 'Invalid difficulty.' })
+  })
+});
+
 const createSession = async (req, res) => {
   try {
-    const { category, difficulty } = req.body;
+    const parsedBody = createSessionSchema.safeParse(req.body);
+    if (!parsedBody.success) {
+      // Return the first error message or a generic one if empty
+      const errorMessage = parsedBody.error.errors[0]?.message || 'Category and difficulty are required.';
+      return res.status(400).json({ error: errorMessage });
+    }
+
+    const { category, difficulty } = parsedBody.data;
     const userId = req.user.id;
 
-    if (!category || !difficulty) {
-      logger.warn('Session creation failed: Missing category or difficulty', { user_id: userId });
-      return res.status(400).json({ error: 'Category and difficulty are required.' });
-    }
-
-    if (!validCategories.includes(category)) {
-      return res.status(400).json({ error: 'Invalid category.' });
-    }
-
-    if (!validCategories.includes(category)) {
-      logger.warn('Session creation failed: Invalid category', { category, user_id: userId });
-      return res.status(400).json({ error: 'Invalid category.' });
-    }
-
-    if (!validDifficulties.includes(difficulty)) {
-      logger.warn('Session creation failed: Invalid difficulty', { difficulty, user_id: userId });
-      return res.status(400).json({ error: 'Invalid difficulty.' });
-    }
-
     logger.info('Requesting topic from AI service', { category, difficulty, user_id: userId });
-
     // Call FastAPI service to generate topic
     const aiServiceUrl = process.env.AI_SERVICE_URL || 'http://127.0.0.1:8000';
     
@@ -59,11 +57,17 @@ const createSession = async (req, res) => {
       return res.status(502).json({ error: 'Failed to generate topic from AI service.' });
     }
 
-    const { topic, hints } = await aiResponse.json();
+    const aiData = await aiResponse.json();
+    topic = aiData.topic;
+    hints = aiData.hints;
 
     if (!topic || !hints) {
         logger.error('AI service returned empty topic or hints', { topic_exists: !!topic, hints_exists: !!hints });
         return res.status(500).json({ error: 'AI service returned an empty topic or hints.' });
+    }
+    } catch (aiError) {
+      logger.error('Failed to communicate with AI Service', { error: aiError.message });
+      return res.status(502).json({ error: 'Failed to reach AI service.' });
     }
 
     // Save session in DB

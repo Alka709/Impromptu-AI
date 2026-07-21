@@ -25,6 +25,20 @@ app.use('/api/sessions', sessionRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/webhooks', webhookRoutes);
 
+// Frontend Logging Proxy
+app.post('/api/logs', (req, res) => {
+  const { level, message, ...attributes } = req.body;
+  if (!message) {
+    return res.status(400).json({ error: 'Message is required' });
+  }
+
+  // Forward to OTel Logger
+  const safeLevel = ['info', 'warn', 'error', 'debug'].includes(level) ? level : 'info';
+  logger[safeLevel](message, { source: 'frontend', ...attributes });
+  
+  res.status(200).json({ status: 'ok' });
+});
+
 // Health check
 app.get('/health', (req, res) => {
   logger.info("Health endpoint called");
@@ -40,7 +54,7 @@ app.use((req, res, next) => {
 // Error handling middleware
 app.use((err, req, res, next) => {
   logger.error("Internal Server Error", { error_message: err.message, stack: err.stack, path: req.originalUrl });
-  res.status(500).json({ error: 'Something went wrong!', details: err.message });
+  res.status(500).json({ error: 'Internal Server Error. Please try again later.' });
 });
 
 module.exports = app;

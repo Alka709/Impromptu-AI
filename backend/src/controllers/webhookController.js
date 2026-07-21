@@ -2,8 +2,26 @@ const { db } = require('../db');
 const { userPrevRecord, metricesCalculated } = require('../db/schema/evaluation');
 const { eq } = require('drizzle-orm');
 
+const { z } = require('zod');
+
+const webhookSchema = z.object({
+  userId: z.string({ required_error: 'Missing userId or sessionId' }).min(1, 'Missing userId or sessionId'),
+  sessionId: z.string({ required_error: 'Missing userId or sessionId' }).min(1, 'Missing userId or sessionId'),
+  summary: z.string().optional(),
+  strengths: z.array(z.string()).optional(),
+  weaknesses: z.array(z.string()).optional(),
+  improvementTips: z.array(z.string()).optional(),
+  overallScore: z.union([z.number(), z.string()]).optional(),
+  metrics: z.any().optional()
+}).passthrough();
+
 const handleEvaluationResult = async (req, res) => {
   try {
+    const parsedBody = webhookSchema.safeParse(req.body);
+    if (!parsedBody.success) {
+      return res.status(400).json({ error: parsedBody.error.errors[0].message });
+    }
+
     const {
       userId,
       sessionId,
@@ -13,11 +31,7 @@ const handleEvaluationResult = async (req, res) => {
       improvementTips,
       overallScore,
       metrics
-    } = req.body;
-
-    if (!userId || !sessionId) {
-      return res.status(400).json({ error: 'Missing userId or sessionId' });
-    }
+    } = parsedBody.data;
 
     // Idempotency check — if this session's report already exists, treat this as a
     // duplicate delivery (e.g. a retried webhook call) and no-op rather than inserting again.
