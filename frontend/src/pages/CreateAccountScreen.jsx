@@ -47,7 +47,7 @@ export default function CreateAccountScreen({ setUser }) {
     <>
 <header className="h-16 w-full flex items-center justify-between px-8 border-b border-gray-100 bg-white sticky top-0 z-50" data-purpose="global-navigation">
 <div className="flex items-center">
-<span className="text-xl font-bold tracking-tight">Impromptu</span>
+<span className="text-xl font-bold tracking-tight">ImpromptuAI</span>
 </div>
 </header>
 <main className="min-h-screen flex flex-col lg:flex-row w-full">

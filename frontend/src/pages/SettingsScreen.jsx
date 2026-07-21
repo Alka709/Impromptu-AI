@@ -246,7 +246,7 @@ export default function SettingsScreen() {
                   </div>
                   <div>
                     <span className="block text-base font-bold text-zinc-900">Google Account</span>
-                    <span className="text-sm text-zinc-500 font-medium">Use Google to sign in to Impromptu</span>
+                    <span className="text-sm text-zinc-500 font-medium">Use Google to sign in to ImpromptuAI</span>
                   </div>
                 </div>
                 <div className="flex items-center space-x-4">

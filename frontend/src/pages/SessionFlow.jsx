@@ -179,7 +179,7 @@ function SpeechPrepScreen({ user, logout, sessionData, timeLeft, startRecording 
     <div className="min-h-[100dvh] w-full flex flex-col lg:flex-row bg-surface">
 <aside className="hidden lg:flex w-[240px] border-r border-gray-200 flex-col bg-white shrink-0" data-purpose="navigation-sidebar">
 <div className="p-6 border-b border-gray-100 flex items-center gap-2">
-<span className="font-bold text-lg tracking-tight">Impromptu</span>
+<span className="font-bold text-lg tracking-tight">ImpromptuAI</span>
 </div>
 <nav className="flex-1 p-4 space-y-2">
 <div className="flex items-center gap-3 px-3 py-2 bg-gray-50 rounded-custom">
@@ -214,7 +214,7 @@ function SpeechPrepScreen({ user, logout, sessionData, timeLeft, startRecording 
 </aside>
 <div className="flex-1 flex flex-col relative">
 <header className="h-16 px-4 md:px-8 flex items-center justify-between lg:justify-end border-b border-gray-100 bg-white shrink-0" data-purpose="top-header">
-<div className="lg:hidden font-bold text-lg tracking-tight">Impromptu</div>
+<div className="lg:hidden font-bold text-lg tracking-tight">ImpromptuAI</div>
 <div className="flex items-center gap-4">
 <button className="text-gray-400 hover:text-black">
 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" /></svg>
@@ -359,7 +359,7 @@ function LiveRecordingScreen({ user, logout, sessionData, timeLeft, stopRecordin
       )}
 <aside className={`${isMobileMenuOpen ? 'flex absolute inset-y-0 left-0 z-50 shadow-2xl h-full' : 'hidden'} lg:flex w-[240px] border-r border-gray-200 flex-col bg-white shrink-0`} data-purpose="navigation-sidebar">
 <div className="p-6 border-b border-gray-100 flex items-center gap-2">
-<span className="font-bold text-lg tracking-tight">Impromptu</span>
+<span className="font-bold text-lg tracking-tight">ImpromptuAI</span>
 {isMobileMenuOpen && (
   <button onClick={() => setIsMobileMenuOpen(false)} className="ml-auto lg:hidden text-gray-500 hover:text-black">
     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
@@ -411,7 +411,7 @@ New Session
 <button onClick={() => setIsMobileMenuOpen(true)} className="p-2 -ml-2 text-gray-600 hover:text-black">
 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" /></svg>
 </button>
-<div className="font-bold text-lg tracking-tight">Impromptu</div>
+<div className="font-bold text-lg tracking-tight">ImpromptuAI</div>
 </div>
 <div className="flex items-center gap-4">
 <button className="text-gray-400 hover:text-black">
@@ -468,7 +468,7 @@ function SpeechAnalysisScreen({ user, sessionData }) {
     <div className="h-screen w-full flex flex-col bg-surface overflow-hidden">
 <header className="h-16 border-b border-surface-dim bg-white flex items-center justify-between px-6 shrink-0">
 <div className="flex items-center gap-2">
-<span className="font-bold text-xl tracking-tight">Impromptu</span>
+<span className="font-bold text-xl tracking-tight">ImpromptuAI</span>
 </div>
 <div className="flex items-center gap-4">
 <button className="p-2 text-gray-500 hover:bg-gray-100 rounded-full">
@@ -559,7 +559,7 @@ function PerformanceReportScreen({ user, logout, sessionData, evaluationResult }
 )}
 <aside className={`w-64 border-r border-gray-200 bg-white flex flex-col fixed inset-y-0 left-0 z-40 transform transition-transform duration-300 ease-in-out md:translate-x-0 ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`} data-purpose="main-navigation">
 <div className="p-6 flex items-center gap-2">
-<h1 className="text-xl font-extrabold tracking-tight">Impromptu</h1>
+<h1 className="text-xl font-extrabold tracking-tight">ImpromptuAI</h1>
 </div>
 <div className="px-4 mb-6">
 <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-custom mb-4">
@@ -602,7 +602,7 @@ function PerformanceReportScreen({ user, logout, sessionData, evaluationResult }
   <button onClick={() => setIsMobileMenuOpen(true)} className="p-2 text-gray-500 hover:text-black">
     <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
   </button>
-  <span className="font-bold ml-2">Impromptu</span>
+  <span className="font-bold ml-2">ImpromptuAI</span>
 </div>
 <div className="flex items-center gap-4">
 <button className="p-2 text-gray-400 hover:text-gray-600">
