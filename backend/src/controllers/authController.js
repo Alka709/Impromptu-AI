@@ -5,6 +5,7 @@ const { db } = require('../db');
 const { users } = require('../db/schema/users');
 const { sendOtpEmail } = require('../utils/emailService');
 const otpService = require('../utils/otpService');
+const logger = require('../telemetry/logger');
 const { normalizeEmail } = require('../utils/normalizeEmail');
 const { isGmailEmail, isValidPassword } = require('../validators/authValidator');
 
@@ -36,6 +37,7 @@ const signup = async (req, res) => {
     // Check if user already exists
     const existingUsers = await db.select().from(users).where(eq(users.email, normalizedEmail));
     if (existingUsers.length > 0) {
+      logger.warn('Signup failed: User already exists', { email });
       return res.status(400).json({ error: 'User with this email already exists' });
     }
 
@@ -62,9 +64,10 @@ const signup = async (req, res) => {
       path: '/'
     });
 
+    logger.info('User signed up successfully', { user_id: newUser.id, email: newUser.email });
     return res.status(201).json({ user: newUser });
   } catch (error) {
-    console.error('signup error:', error);
+    logger.error('signup error', { error: error.message, stack: error.stack });
     return res.status(500).json({ error: 'Internal server error' });
   }
 };
@@ -78,14 +81,26 @@ const login = async (req, res) => {
     const { email, password } = req.body;
     if (!email || !password) return res.status(400).json({ error: 'Email and password required' });
 
+    
     const normalizedEmail = normalizeEmail(email);
-    const foundUsers = await db.select().from(users).where(eq(users.email, normalizedEmail));
-    if (foundUsers.length === 0) return res.status(401).json({ error: 'Invalid email or password' });
+
+    const foundUsers = await db
+      .select()
+      .from(users)
+      .where(eq(users.email, normalizedEmail));
+
+    if (foundUsers.length === 0) {
+      logger.warn("Login failed: User not found", { email });
+      return res.status(401).json({ error: "Invalid email or password" });
+    }
 
     const user = foundUsers[0];
 
     const isMatch = await bcrypt.compare(password, user.password_hash);
-    if (!isMatch) return res.status(401).json({ error: 'Invalid email or password' });
+    if (!isMatch) {
+      logger.warn('Login failed: Invalid password', { email });
+      return res.status(401).json({ error: 'Invalid email or password' });
+    }
 
     // Generate JWT
     const token = jwt.sign(
@@ -102,15 +117,17 @@ const login = async (req, res) => {
       path: '/'
     });
 
+    logger.info('User logged in successfully', { user_id: user.id, email: user.email });
     return res.status(200).json({ user: { id: user.id, email: user.email, name: user.name, photo: user.photo } });
   } catch (error) {
-    console.error('login error:', error);
+    logger.error('login error', { error: error.message, stack: error.stack });
     return res.status(500).json({ error: 'Internal server error' });
   }
 };
 
 const logout = async (req, res) => {
   res.clearCookie('token', { path: '/' });
+  logger.info('User logged out');
   return res.status(200).json({ message: 'Logged out successfully.' });
 };
 
@@ -123,7 +140,7 @@ const me = async (req, res) => {
     const { password_hash, ...userWithoutPassword } = foundUsers[0];
     return res.status(200).json({ user: userWithoutPassword });
   } catch (error) {
-    console.error('Me endpoint error:', error);
+    logger.error('Me endpoint error', { error: error.message, stack: error.stack });
     return res.status(500).json({ error: 'Internal server error' });
   }
 };

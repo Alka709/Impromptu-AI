@@ -1,0 +1,35 @@
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+exporters:
+  loki:
+    endpoint: "http://loki:3100/loki/api/v1/push"
+    default_labels_enabled:
+      exporter: false
+      job: true
+      level: true
+  debug:
+    verbosity: detailed
+
+processors:
+  batch:
+  attributes:
+    actions:
+      - key: loki.attribute.labels
+        action: insert
+        value: "service.name,severity"
+      - key: loki.resource.labels
+        action: insert
+        value: "service.name"
+
+service:
+  pipelines:
+    logs:
+      receivers: [otlp]
+      processors: [attributes, batch]
+      exporters: [loki, debug]

@@ -1,6 +1,5 @@
 import os
 import json
-import logging
 import tempfile
 import requests
 import subprocess
@@ -9,11 +8,9 @@ from dotenv import load_dotenv
 from agents.evaluation_pipeline import EvaluationPipeline
 from speech_analysis.metrics import extract_all_metrics
 from speech_analysis.utils import NumpyEncoder
+from telemetry import logger
 
 load_dotenv(override=True)
-
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 
 pipeline = EvaluationPipeline()
 
@@ -49,7 +46,7 @@ def process_evaluation_job(job_data: dict):
     audio_url = job_data.get('audioDownloadUrl')
     callback_url = job_data.get('reportCallbackUrl')
 
-    logger.info(f"Starting evaluation job for session {session_id}")
+    logger.info(f"Starting evaluation job for session {session_id}", extra={"session_id": session_id, "user_id": user_id})
 
     temp_path = None
     wav_path = None
@@ -64,7 +61,7 @@ def process_evaluation_job(job_data: dict):
                 tf.write(chunk)
             temp_path = tf.name
             
-        logger.info(f"Audio downloaded to {temp_path}")
+        logger.info(f"Audio downloaded to {temp_path}", extra={"session_id": session_id})
 
         # Convert webm to wav (16 kHz mono) because speech_analysis audio loader expects a wav file
         wav_path = temp_path.replace(".webm", ".wav")
@@ -82,21 +79,21 @@ def process_evaluation_job(job_data: dict):
             raise e
 
         # 2. Extract metrics using speech_analysis
-        logger.info(f"Extracting speech metrics from {wav_path}...")
+        logger.info(f"Extracting speech metrics from {wav_path}...", extra={"session_id": session_id})
         metrics = extract_all_metrics(wav_path)
         
         # 3. Fetch past sessions
-        logger.info(f"Fetching past sessions for user {user_id}")
+        logger.info(f"Fetching past sessions for user {user_id}", extra={"session_id": session_id, "user_id": user_id})
         past_sessions = fetch_past_sessions(user_id)
         
         # 4. Evaluate with Gemini
-        logger.info(f"Evaluating with Gemini")
+        logger.info(f"Evaluating with Gemini", extra={"session_id": session_id, "metrics_count": len(metrics) if metrics else 0})
         evaluation = pipeline.evaluate(
             metrics=metrics,
             topic=topic,
             history=past_sessions,
         )
-        logger.info(f"Gemini evaluation completed. Score: {evaluation.get('overallScore')}")
+        logger.info(f"Gemini evaluation completed", extra={"session_id": session_id, "overallScore": evaluation.get('overallScore')})
         
         # 5. Send results back to Express
         payload = {
@@ -118,10 +115,10 @@ def process_evaluation_job(job_data: dict):
         )
         webhook_res.raise_for_status()
         
-        logger.info(f"Job completed successfully for session {session_id}")
+        logger.info(f"Job completed successfully for session {session_id}", extra={"session_id": session_id})
 
     except Exception as e:
-        logger.error(f"Job failed for session {session_id}: {e}", exc_info=True)
+        logger.error(f"Job failed for session {session_id}: {e}", exc_info=True, extra={"session_id": session_id})
     finally:
         # Clean up temporary files
         if temp_path and os.path.exists(temp_path):

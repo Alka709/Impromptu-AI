@@ -5,6 +5,7 @@ from pydantic import BaseModel
 from dotenv import load_dotenv
 from worker import process_evaluation_job
 import json
+from telemetry import logger
 
 load_dotenv(override=True)
 
@@ -28,7 +29,9 @@ class EvalRequest(BaseModel):
 
 @app.post("/generate_topic")
 async def generate_topic(request: TopicRequest):
+    logger.info("Received generate_topic request", extra={"category": request.category, "difficulty": request.difficulty})
     if not GEMINI_API_KEY:
+        logger.error("GEMINI_API_KEY is not configured")
         raise HTTPException(status_code=500, detail="GEMINI_API_KEY is not configured.")
 
     prompt = f"""
@@ -57,13 +60,15 @@ async def generate_topic(request: TopicRequest):
         data = json.loads(text.strip())
         
         if "topic" not in data or "hints" not in data:
+            logger.error("AI returned malformed JSON", extra={"data": data})
             raise HTTPException(status_code=500, detail="AI returned malformed JSON.")
 
+        logger.info("Successfully generated topic", extra={"topic": data["topic"]})
         return data
     except Exception as e:
-        print(f"Error generating topic: {e}")
+        logger.error(f"Error generating topic: {e}", exc_info=True)
         try:
-            print(f"Raw AI response was: {response.text}")
+            logger.debug(f"Raw AI response was: {response.text}")
         except:
             pass
         raise HTTPException(status_code=500, detail=str(e))
@@ -71,12 +76,14 @@ async def generate_topic(request: TopicRequest):
 @app.post("/api/evaluate/enqueue")
 async def enqueue_evaluation(request: EvalRequest, background_tasks: BackgroundTasks):
     try:
+        logger.info("Enqueueing evaluation job natively", extra={"session_id": request.sessionId, "user_id": request.userId})
         background_tasks.add_task(process_evaluation_job, request.dict())
         return {"message": "Job enqueued natively", "job_id": request.sessionId}
     except Exception as e:
-        print(f"Failed to enqueue job: {e}")
+        logger.error(f"Failed to enqueue job: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Could not enqueue job natively")
 
 @app.get("/health")
 def health_check():
+    logger.info("AI Service health check called")
     return {"status": "ok"}

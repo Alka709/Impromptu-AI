@@ -3,6 +3,7 @@ const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
 const { db } = require('../db');
 const { sessions } = require('../db/schema/sessions');
 const { eq } = require('drizzle-orm');
+const logger = require('../telemetry/logger');
 
 const s3Client = new S3Client({
   region: process.env.AWS_REGION || 'us-east-1',
@@ -18,12 +19,14 @@ const uploadAudio = async (req, res) => {
     const userId = req.user.id;
 
     if (!req.file) {
+      logger.warn('Audio upload failed: No audio file provided', { session_id: sessionId, user_id: userId });
       return res.status(400).json({ error: 'No audio file provided.' });
     }
 
     // Verify session belongs to user
     const existingSession = await db.select().from(sessions).where(eq(sessions.id, sessionId));
     if (!existingSession.length || existingSession[0].user_id !== userId) {
+      logger.warn('Audio upload failed: Session not found or unauthorized', { session_id: sessionId, user_id: userId });
       return res.status(404).json({ error: 'Session not found or unauthorized.' });
     }
 
@@ -36,7 +39,9 @@ const uploadAudio = async (req, res) => {
       ContentType: req.file.mimetype,
     });
 
+    logger.info('Uploading audio file to S3', { fileKey, bucket: process.env.AWS_S3_BUCKET_NAME });
     await s3Client.send(command);
+    logger.info('Audio uploaded to S3 successfully', { fileKey });
 
     const audioUrl = `https://${process.env.AWS_S3_BUCKET_NAME}.s3.${process.env.AWS_REGION || 'us-east-1'}.amazonaws.com/${fileKey}`;
 
@@ -65,20 +70,22 @@ const uploadAudio = async (req, res) => {
     };
 
     try {
+      logger.info('Enqueueing evaluation to AI service', { session_id: sessionId, aiServiceUrl });
       await fetch(`${aiServiceUrl}/api/evaluate/enqueue`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(fastApiPayload)
       });
+      logger.info('Successfully enqueued evaluation', { session_id: sessionId });
     } catch (err) {
-      console.error('Failed to trigger FastAPI evaluation:', err);
+      logger.error('Failed to trigger FastAPI evaluation', { error: err.message, stack: err.stack, session_id: sessionId });
       // We don't fail the upload if evaluation trigger fails, but log it.
     }
 
     return res.status(200).json({ message: 'Audio uploaded successfully', audio_url: audioUrl });
 
   } catch (error) {
-    console.error('Audio upload error:', error);
+    logger.error('Audio upload error', { error: error.message, stack: error.stack, session_id: req.params.id });
     return res.status(500).json({ error: 'Failed to upload audio' });
   }
 };

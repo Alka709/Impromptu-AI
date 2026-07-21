@@ -1,4 +1,5 @@
 const express = require('express');
+const logger = require('./telemetry/logger');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
 require('dotenv').config();
@@ -26,17 +27,19 @@ app.use('/api/webhooks', webhookRoutes);
 
 // Health check
 app.get('/health', (req, res) => {
+  logger.info("Health endpoint called");
   res.status(200).json({ status: 'ok' });
 });
 
 // 404 Not Found middleware
 app.use((req, res, next) => {
+  logger.warn(`Not Found: ${req.method} ${req.originalUrl}`, { path: req.originalUrl, method: req.method });
   res.status(404).json({ error: 'NOT_FOUND', message: `Cannot ${req.method} ${req.originalUrl}` });
 });
 
 // Error handling middleware
 app.use((err, req, res, next) => {
-  console.error(err.stack);
+  logger.error("Internal Server Error", { error_message: err.message, stack: err.stack, path: req.originalUrl });
   res.status(500).json({ error: 'Something went wrong!', details: err.message });
 });
 

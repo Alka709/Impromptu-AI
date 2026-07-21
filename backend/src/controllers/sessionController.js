@@ -2,6 +2,7 @@ const { db } = require('../db');
 const { sessions } = require('../db/schema/sessions');
 const { userPrevRecord, metricesCalculated } = require('../db/schema/evaluation');
 const { eq } = require('drizzle-orm');
+const logger = require('../telemetry/logger');
 
 const validCategories = [
   'Technology',
@@ -19,6 +20,7 @@ const createSession = async (req, res) => {
     const userId = req.user.id;
 
     if (!category || !difficulty) {
+      logger.warn('Session creation failed: Missing category or difficulty', { user_id: userId });
       return res.status(400).json({ error: 'Category and difficulty are required.' });
     }
 
@@ -26,9 +28,17 @@ const createSession = async (req, res) => {
       return res.status(400).json({ error: 'Invalid category.' });
     }
 
+    if (!validCategories.includes(category)) {
+      logger.warn('Session creation failed: Invalid category', { category, user_id: userId });
+      return res.status(400).json({ error: 'Invalid category.' });
+    }
+
     if (!validDifficulties.includes(difficulty)) {
+      logger.warn('Session creation failed: Invalid difficulty', { difficulty, user_id: userId });
       return res.status(400).json({ error: 'Invalid difficulty.' });
     }
+
+    logger.info('Requesting topic from AI service', { category, difficulty, user_id: userId });
 
     // Call FastAPI service to generate topic
     const aiServiceUrl = process.env.AI_SERVICE_URL || 'http://127.0.0.1:8000';
@@ -43,21 +53,17 @@ const createSession = async (req, res) => {
         body: JSON.stringify({ category, difficulty }),
       });
 
-      if (aiResponse.ok) {
-        const data = await aiResponse.json();
-        topic = data.topic;
-        hints = data.hints;
-      } else {
-        console.warn('AI Service returned non-ok status, using fallback.');
-      }
-    } catch (err) {
-      console.warn('AI Service unreachable, using fallback dummy data for testing:', err.message);
+    if (!aiResponse.ok) {
+      const errorData = await aiResponse.json();
+      logger.error('AI Service Error during topic generation', { errorData, category, difficulty });
+      return res.status(502).json({ error: 'Failed to generate topic from AI service.' });
     }
 
-    if (!topic || !hints || hints.length === 0) {
-      // Fallback for UI testing if AI service is down
-      topic = `Dummy Topic for ${category} (${difficulty})`;
-      hints = JSON.stringify(['Dummy hint 1: Introduction', 'Dummy hint 2: Main points', 'Dummy hint 3: Conclusion']);
+    const { topic, hints } = await aiResponse.json();
+
+    if (!topic || !hints) {
+        logger.error('AI service returned empty topic or hints', { topic_exists: !!topic, hints_exists: !!hints });
+        return res.status(500).json({ error: 'AI service returned an empty topic or hints.' });
     }
 
     // Save session in DB
@@ -69,10 +75,11 @@ const createSession = async (req, res) => {
       hints,
     }).returning();
 
+    logger.info('Session created successfully', { session_id: newSession[0].id, user_id: userId });
     return res.status(201).json(newSession[0]);
 
   } catch (error) {
-    console.error('Create session error:', error);
+    logger.error('Create session error', { error: error.message, stack: error.stack });
     return res.status(500).json({ error: 'Internal server error' });
   }
 };
@@ -114,7 +121,7 @@ const getSessionEvaluation = async (req, res) => {
       metrics: metrics
     });
   } catch (error) {
-    console.error('Get evaluation error:', error);
+    logger.error('Get evaluation error', { error: error.message, stack: error.stack, session_id: req.params.id });
     return res.status(500).json({ error: 'Internal server error' });
   }
 };
@@ -133,12 +140,13 @@ const getSession = async (req, res) => {
 
     const session = sessionList[0];
     if (session.user_id !== userId) {
+      logger.warn('Unauthorized session access attempt', { session_id: sessionId, user_id: userId });
       return res.status(403).json({ error: 'Unauthorized.' });
     }
 
     return res.status(200).json(session);
   } catch (error) {
-    console.error('Get session error:', error);
+    logger.error('Get session error', { error: error.message, stack: error.stack, session_id: req.params.id });
     return res.status(500).json({ error: 'Internal server error' });
   }
 };
