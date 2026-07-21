@@ -50,8 +50,8 @@ export default function CreateAccountScreen({ setUser }) {
 <span className="text-xl font-bold tracking-tight">Impromptu</span>
 </div>
 </header>
-<main className="flex w-full split-container">
-<section className="hidden lg:flex flex-1 bg-surface items-center justify-center relative p-12" data-purpose="decorative-branding">
+<main className="min-h-screen flex flex-col lg:flex-row w-full">
+<section className="hidden lg:flex flex-1 bg-surface items-center justify-center relative p-12 bg-[#f1efea]" data-purpose="decorative-branding">
 <div className="w-full max-w-md flex flex-col items-center text-center">
 <div className="w-64 h-48 mic-logo-container rounded-custom flex flex-col items-center justify-center space-y-6 bg-white/30">
 <div className="w-16 h-16 rounded-full border-2 border-slate-800 flex items-center justify-center">
@@ -63,8 +63,8 @@ export default function CreateAccountScreen({ setUser }) {
 </div>
 </div>
 </section>
-<section className="flex-1 flex flex-col items-center justify-center p-6 sm:p-12 overflow-y-auto" data-purpose="registration-form-area">
-<div className="form-container w-full max-w-md">
+<section className="flex-1 bg-white flex flex-col items-center justify-center p-6 sm:p-12 overflow-y-auto" data-purpose="registration-form-area">
+<div className="form-container w-full max-w-md mt-12 lg:mt-0">
 <header className="mb-8">
 <h1 className="text-3xl font-bold text-slate-900 mb-2">Create Account</h1>
 <p className="text-slate-500 text-sm">Join the community and start speaking.</p>

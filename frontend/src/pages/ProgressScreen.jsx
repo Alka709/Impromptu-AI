@@ -121,7 +121,7 @@ export default function ProgressScreen() {
   const pieColors = ['#10b981', '#3b82f6', '#f59e0b', '#8b5cf6', '#ec4899', '#64748b'];
 
   return (
-    <div className="p-8 pb-24">
+    <div className="p-4 md:p-8 pb-24">
       {/*  Page Title  */}
       <section className="mb-8">
         <h2 className="text-3xl font-extrabold text-impromptu-black">Your Progress</h2>
@@ -145,7 +145,7 @@ export default function ProgressScreen() {
         </div>
       </section>
 
-      <section className="bg-white p-8 rounded-2xl border border-impromptu-border shadow-sm mb-8" data-purpose="main-chart">
+      <section className="bg-white p-4 sm:p-8 rounded-2xl border border-impromptu-border shadow-sm mb-8" data-purpose="main-chart">
         <h3 className="text-lg font-bold text-impromptu-black mb-6">Overall Score Over Time</h3>
         <div className="h-72 w-full">
           <ResponsiveContainer width="100%" height="100%">
@@ -170,7 +170,7 @@ export default function ProgressScreen() {
 
       <section className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8" data-purpose="detailed-metrics">
         {/*  Skill Breakdown (Spider/Radar)  */}
-        <div className="bg-white p-8 rounded-2xl border border-impromptu-border shadow-sm min-h-[400px] flex flex-col">
+        <div className="bg-white p-4 sm:p-8 rounded-2xl border border-impromptu-border shadow-sm min-h-[400px] flex flex-col">
           <h3 className="text-lg font-bold text-impromptu-black mb-6">Average Skill Breakdown</h3>
           <div className="flex-1 w-full h-full">
             <ResponsiveContainer width="100%" height="100%">
@@ -189,7 +189,7 @@ export default function ProgressScreen() {
         </div>
 
         {/*  Category Distribution  */}
-        <div className="bg-white p-8 rounded-2xl border border-impromptu-border shadow-sm min-h-[400px] flex flex-col">
+        <div className="bg-white p-4 sm:p-8 rounded-2xl border border-impromptu-border shadow-sm min-h-[400px] flex flex-col">
           <h3 className="text-lg font-bold text-impromptu-black mb-6">Topics Practiced</h3>
           <div className="flex-1 w-full h-full flex flex-col items-center justify-center">
             <ResponsiveContainer width="100%" height="100%">

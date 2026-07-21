@@ -55,8 +55,8 @@ export default function LoginPage({ setUser }) {
 <h1 className="text-xl font-bold tracking-tight">Impromptu</h1>
 </div>
 </header>
-<main className="split-container">
-<section className="left-panel hidden lg:flex" data-purpose="marketing-section">
+<main className="min-h-screen flex flex-col lg:flex-row w-full">
+<section className="flex-1 bg-[#f1efea] hidden lg:flex items-center justify-center relative" data-purpose="marketing-section">
 <div className="mic-box">
 {/*  Microphone Icon Circle  */}
 <div className="inline-flex items-center justify-center w-20 h-20 rounded-full border border-black mb-8">
@@ -68,8 +68,8 @@ export default function LoginPage({ setUser }) {
         </p>
 </div>
 </section>
-<section className="right-panel px-6 py-12 md:px-12 w-full lg:w-1/2" data-purpose="login-form-container">
-<div className="w-full max-w-md space-y-8">
+<section className="flex-1 bg-white flex flex-col items-center justify-center px-6 py-12 md:px-12 w-full lg:w-1/2" data-purpose="login-form-container">
+<div className="w-full max-w-md space-y-8 mt-12 lg:mt-0">
 {/*  Login Heading  */}
 <div className="text-left">
 <h2 className="text-4xl font-bold text-black mb-10">Login</h2>

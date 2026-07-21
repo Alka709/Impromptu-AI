@@ -49,7 +49,7 @@ export default function DashboardScreen() {
         <div className="flex justify-center p-12 text-zinc-500 font-medium">Loading your dashboard...</div>
       ) : (
         <>
-          <section className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-10" data-purpose="metrics-row">
+          <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10" data-purpose="metrics-row">
             <div className="bg-white p-6 rounded-2xl border border-zinc-100 shadow-sm transition-transform hover:-translate-y-1">
               <p className="text-xs font-bold text-zinc-400 uppercase tracking-widest mb-4">Total Sessions</p>
               <p className="text-3xl font-extrabold text-zinc-900">{dashboardData.totalSessions || 0}</p>
@@ -71,13 +71,13 @@ export default function DashboardScreen() {
             </div>
           </section>
 
-          <section className="bg-gradient-to-br from-indigo-900 via-blue-900 to-zinc-900 p-6 md:p-10 rounded-3xl shadow-xl mb-12 flex flex-col md:flex-row items-center justify-between relative overflow-hidden group">
+          <section className="bg-gradient-to-br from-indigo-900 via-blue-900 to-zinc-900 p-6 md:p-10 rounded-3xl shadow-xl mb-12 flex flex-col md:flex-row items-center md:items-start justify-between relative overflow-hidden group">
             <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10 mix-blend-overlay"></div>
             <div className="max-w-2xl relative z-10 mb-6 md:mb-0">
               <h2 className="text-3xl font-bold text-white mb-2">Ready to Impress?</h2>
               <p className="text-indigo-200 leading-relaxed text-lg">Start a new practice session and get real-time, AI-driven feedback on your tone, pacing, and clarity.</p>
             </div>
-            <button onClick={startNewSession} className="relative z-10 bg-white text-indigo-900 px-10 py-4 rounded-full font-extrabold text-lg hover:bg-indigo-50 hover:scale-105 transition-all active:scale-95 shadow-lg flex items-center gap-2">
+            <button onClick={startNewSession} className="relative z-10 bg-white text-indigo-900 px-8 py-3 md:px-10 md:py-4 rounded-full font-extrabold text-base md:text-lg hover:bg-indigo-50 hover:scale-105 transition-all active:scale-95 shadow-lg flex items-center gap-2 mt-4 md:mt-0 w-full md:w-auto justify-center">
               Start Practice
               <svg className="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
             </button>

@@ -4,7 +4,7 @@ const { sessions } = require('../db/schema/sessions');
 const { users } = require('../db/schema/users');
 const bcrypt = require('bcryptjs');
 const { eq, desc, inArray } = require('drizzle-orm');
-const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
+const { S3Client, PutObjectCommand, DeleteObjectCommand } = require('@aws-sdk/client-s3');
 
 const s3Client = new S3Client({
   region: process.env.AWS_REGION || 'us-east-1',
@@ -216,5 +216,45 @@ const updateUserProfile = async (req, res) => {
   }
 };
 
+const deleteUserAccount = async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    if (req.user && req.user.id !== userId) {
+      return res.status(403).json({ error: 'Unauthorized to delete this account' });
+    }
+
+    const [user] = await db.select().from(users).where(eq(users.id, userId));
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    // Try to delete avatar from S3 (fire and forget)
+    if (user.photo && user.photo.includes(process.env.AWS_S3_BUCKET_NAME)) {
+      try {
+        const key = user.photo.split('.amazonaws.com/')[1];
+        if (key) {
+          s3Client.send(new DeleteObjectCommand({
+            Bucket: process.env.AWS_S3_BUCKET_NAME,
+            Key: key
+          })).catch(err => console.error('Failed to delete avatar from S3:', err));
+        }
+      } catch (err) {
+        console.error('Error parsing S3 avatar key:', err);
+      }
+    }
+
+    await db.transaction(async (tx) => {
+      await tx.delete(userPrevRecord).where(eq(userPrevRecord.user_id, userId));
+      await tx.delete(metricesCalculated).where(eq(metricesCalculated.user_id, userId));
+      await tx.delete(sessions).where(eq(sessions.user_id, userId));
+      await tx.delete(users).where(eq(users.id, userId));
+    });
+
+    return res.status(200).json({ message: 'Account deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting user account:', error);
+    return res.status(500).json({ error: 'Failed to delete account' });
+  }
+};
+
 module.exports = {
-  getSessionHistory, getRecentSessionRecords, getDashboardData, updateUserProfile };
+  getSessionHistory, getRecentSessionRecords, getDashboardData, updateUserProfile, deleteUserAccount };

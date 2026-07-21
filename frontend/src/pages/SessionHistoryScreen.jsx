@@ -44,7 +44,7 @@ export default function SessionHistoryScreen() {
   };
 
   return (
-    <div className="p-8 pb-24">
+    <div className="p-4 md:p-8 pb-24">
       {/*  Page Header  */}
       <div className="mb-10">
         <h1 className="text-4xl font-extrabold text-zinc-900 tracking-tight">Session History</h1>
@@ -108,9 +108,7 @@ export default function SessionHistoryScreen() {
                 <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className="border-b border-zinc-100 bg-zinc-50/50">
-                      <th className="p-6 text-xs font-bold text-zinc-400 uppercase tracking-widest">Date</th>
-                      <th className="p-6 text-xs font-bold text-zinc-400 uppercase tracking-widest">Topic</th>
-                      <th className="p-6 text-xs font-bold text-zinc-400 uppercase tracking-widest hidden md:table-cell">Category</th>
+                      <th className="p-6 text-xs font-bold text-zinc-400 uppercase tracking-widest">Session Details</th>
                       <th className="p-6 text-xs font-bold text-zinc-400 uppercase tracking-widest hidden lg:table-cell">Difficulty</th>
                       <th className="p-6 text-xs font-bold text-zinc-400 uppercase tracking-widest text-right">Score</th>
                     </tr>
@@ -122,14 +120,14 @@ export default function SessionHistoryScreen() {
                         onClick={() => navigate(`/session/${session.session_id}`)}
                         className="hover:bg-indigo-50/30 transition-colors cursor-pointer group"
                       >
-                        <td className="p-6 text-sm font-medium text-zinc-500">
-                          {new Date(session.created_at).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
-                        </td>
                         <td className="p-6">
                           <p className="text-base font-bold text-zinc-900 group-hover:text-indigo-700 transition-colors">{session.topic}</p>
-                        </td>
-                        <td className="p-6 hidden md:table-cell">
-                          <span className="px-3 py-1 bg-zinc-100 text-zinc-600 text-xs font-bold uppercase tracking-wider rounded-md">{session.category}</span>
+                          <p className="text-sm font-medium text-zinc-500 mt-1">
+                            {new Date(session.created_at).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
+                          </p>
+                          <div className="mt-2 flex items-center gap-2">
+                            <span className="px-2 py-0.5 bg-zinc-100 text-zinc-600 text-[10px] font-bold uppercase tracking-wider rounded-md">{session.category}</span>
+                          </div>
                         </td>
                         <td className="p-6 hidden lg:table-cell">
                           <span className="px-3 py-1 bg-zinc-50 border border-zinc-200 text-zinc-500 text-xs font-bold uppercase tracking-wider rounded-md">{session.difficulty}</span>

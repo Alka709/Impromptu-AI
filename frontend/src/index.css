@@ -25,27 +25,7 @@
   }
 
   /* Specific Component Styles from Stitch */
-  .split-container {
-    height: 100vh;
-    display: flex;
-  }
-  
-  .left-panel {
-    flex: 1;
-    background-color: #f1efea;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    position: relative;
-  }
-  
-  .right-panel {
-    flex: 1;
-    background-color: #ffffff;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
+
 
   .mic-box {
     border: 1px dashed #d1d1d1;

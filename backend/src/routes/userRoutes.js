@@ -1,5 +1,5 @@
 const express = require('express');
-const { getRecentSessionRecords, getDashboardData, getSessionHistory, updateUserProfile } = require('../controllers/userController');
+const { getRecentSessionRecords, getDashboardData, getSessionHistory, updateUserProfile, deleteUserAccount } = require('../controllers/userController');
 const authMiddleware = require('../middleware/authMiddleware');
 const { internalAuthMiddleware } = require('../middleware/internalAuth.middleware');
 
@@ -18,5 +18,6 @@ router.get('/:userId/sessions/recent', authOrInternal, getRecentSessionRecords);
 router.get('/:userId/dashboard', authMiddleware, getDashboardData);
 router.get('/:userId/history', authMiddleware, getSessionHistory);
 router.put('/:userId/profile', authMiddleware, updateUserProfile);
+router.delete('/:userId', authMiddleware, deleteUserAccount);
 
 module.exports = router;
