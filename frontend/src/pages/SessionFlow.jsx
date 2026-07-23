@@ -87,18 +87,43 @@ export default function SessionFlow({ user, logout }) {
         const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
         // Upload audio
         setFlowState('analyzing');
-        const formData = new FormData();
-        formData.append('audio', audioBlob, 'speech.webm');
         
         try {
-          await fetch(`${API_BASE}/sessions/${id}/audio`, {
+          // 1. Get Presigned URL
+          const urlRes = await fetch(`${API_BASE}/sessions/${id}/audio/url`, {
             method: 'POST',
-            body: formData,
             credentials: 'include'
           });
+          if (!urlRes.ok) throw new Error('Failed to get upload URL');
+          const { uploadUrl, fields, fileKey } = await urlRes.json();
+
+          // 2. Upload directly to S3 using FormData
+          const formData = new FormData();
+          Object.entries(fields).forEach(([key, value]) => {
+            formData.append(key, value);
+          });
+          formData.append('file', audioBlob);
+
+          const s3Res = await fetch(uploadUrl, {
+            method: 'POST',
+            body: formData
+          });
+          if (!s3Res.ok) throw new Error('Failed to upload to S3');
+
+          // 3. Confirm upload with backend
+          const confirmRes = await fetch(`${API_BASE}/sessions/${id}/audio/confirm`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ fileKey }),
+            credentials: 'include'
+          });
+          if (!confirmRes.ok) throw new Error('Failed to confirm upload');
+
           pollEvaluation();
         } catch (err) {
-          console.error('Failed to upload audio');
+          console.error('Failed to upload audio', err);
         }
       };
 
@@ -139,6 +164,9 @@ export default function SessionFlow({ user, logout }) {
             clearInterval(pollInterval);
             setEvaluationResult(data);
             setFlowState('report');
+          } else if (data && data.status === 'failed') {
+            clearInterval(pollInterval);
+            setFlowState('error');
           }
         }
       } catch (e) {
@@ -160,9 +188,44 @@ export default function SessionFlow({ user, logout }) {
       return <SpeechAnalysisScreen {...props} />;
     case 'report':
       return <PerformanceReportScreen {...props} />;
+    case 'error':
+      return <SpeechErrorScreen user={user} logout={logout} />;
     default:
       return <div>Invalid state</div>;
   }
+}
+
+function SpeechErrorScreen({ user }) {
+  return (
+    <div className="h-screen w-full flex flex-col bg-surface overflow-hidden">
+      <header className="h-16 border-b border-surface-dim bg-white flex items-center justify-between px-6 shrink-0">
+        <div className="flex items-center gap-2">
+          <span className="font-bold text-xl tracking-tight">ImpromptuAI</span>
+        </div>
+        <div className="flex items-center gap-4">
+          <div className="w-8 h-8 rounded-full bg-gray-200 border border-gray-300 flex items-center justify-center overflow-hidden">
+            <span className="text-xs font-bold text-gray-600">{user?.name?.charAt(0).toUpperCase()}</span>
+          </div>
+        </div>
+      </header>
+      <main className="flex-1 flex items-center justify-center bg-surface p-8">
+        <div className="max-w-md w-full text-center space-y-8">
+          <div className="w-24 h-24 mx-auto rounded-full bg-red-50 text-red-500 shadow-sm flex items-center justify-center border border-red-100">
+            <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight mb-2">Analysis Failed</h1>
+            <p className="text-gray-500 text-sm">Something went wrong while our AI was analyzing your speech. Please try again.</p>
+          </div>
+          <Link to="/" className="inline-block px-6 py-3 bg-black text-white rounded-full font-bold text-sm tracking-wide shadow hover:bg-gray-800 transition">
+            Return to Dashboard
+          </Link>
+        </div>
+      </main>
+    </div>
+  );
 }
 
 
@@ -179,7 +242,7 @@ function SpeechPrepScreen({ user, logout, sessionData, timeLeft, startRecording 
     <div className="min-h-[100dvh] w-full flex flex-col lg:flex-row bg-surface">
 <aside className="hidden lg:flex w-[240px] border-r border-gray-200 flex-col bg-white shrink-0" data-purpose="navigation-sidebar">
 <div className="p-6 border-b border-gray-100 flex items-center gap-2">
-<span className="font-bold text-lg tracking-tight">Impromptu</span>
+<span className="font-bold text-lg tracking-tight">ImpromptuAI</span>
 </div>
 <nav className="flex-1 p-4 space-y-2">
 <div className="flex items-center gap-3 px-3 py-2 bg-gray-50 rounded-custom">
@@ -214,7 +277,7 @@ function SpeechPrepScreen({ user, logout, sessionData, timeLeft, startRecording 
 </aside>
 <div className="flex-1 flex flex-col relative">
 <header className="h-16 px-4 md:px-8 flex items-center justify-between lg:justify-end border-b border-gray-100 bg-white shrink-0" data-purpose="top-header">
-<div className="lg:hidden font-bold text-lg tracking-tight">Impromptu</div>
+<div className="lg:hidden font-bold text-lg tracking-tight">ImpromptuAI</div>
 <div className="flex items-center gap-4">
 <button className="text-gray-400 hover:text-black">
 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" /></svg>
@@ -359,7 +422,7 @@ function LiveRecordingScreen({ user, logout, sessionData, timeLeft, stopRecordin
       )}
 <aside className={`${isMobileMenuOpen ? 'flex absolute inset-y-0 left-0 z-50 shadow-2xl h-full' : 'hidden'} lg:flex w-[240px] border-r border-gray-200 flex-col bg-white shrink-0`} data-purpose="navigation-sidebar">
 <div className="p-6 border-b border-gray-100 flex items-center gap-2">
-<span className="font-bold text-lg tracking-tight">Impromptu</span>
+<span className="font-bold text-lg tracking-tight">ImpromptuAI</span>
 {isMobileMenuOpen && (
   <button onClick={() => setIsMobileMenuOpen(false)} className="ml-auto lg:hidden text-gray-500 hover:text-black">
     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
@@ -411,7 +474,7 @@ New Session
 <button onClick={() => setIsMobileMenuOpen(true)} className="p-2 -ml-2 text-gray-600 hover:text-black">
 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" /></svg>
 </button>
-<div className="font-bold text-lg tracking-tight">Impromptu</div>
+<div className="font-bold text-lg tracking-tight">ImpromptuAI</div>
 </div>
 <div className="flex items-center gap-4">
 <button className="text-gray-400 hover:text-black">
@@ -468,7 +531,7 @@ function SpeechAnalysisScreen({ user, sessionData }) {
     <div className="h-screen w-full flex flex-col bg-surface overflow-hidden">
 <header className="h-16 border-b border-surface-dim bg-white flex items-center justify-between px-6 shrink-0">
 <div className="flex items-center gap-2">
-<span className="font-bold text-xl tracking-tight">Impromptu</span>
+<span className="font-bold text-xl tracking-tight">ImpromptuAI</span>
 </div>
 <div className="flex items-center gap-4">
 <button className="p-2 text-gray-500 hover:bg-gray-100 rounded-full">
@@ -559,7 +622,7 @@ function PerformanceReportScreen({ user, logout, sessionData, evaluationResult }
 )}
 <aside className={`w-64 border-r border-gray-200 bg-white flex flex-col fixed inset-y-0 left-0 z-40 transform transition-transform duration-300 ease-in-out md:translate-x-0 ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`} data-purpose="main-navigation">
 <div className="p-6 flex items-center gap-2">
-<h1 className="text-xl font-extrabold tracking-tight">Impromptu</h1>
+<h1 className="text-xl font-extrabold tracking-tight">ImpromptuAI</h1>
 </div>
 <div className="px-4 mb-6">
 <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-custom mb-4">
@@ -602,7 +665,7 @@ function PerformanceReportScreen({ user, logout, sessionData, evaluationResult }
   <button onClick={() => setIsMobileMenuOpen(true)} className="p-2 text-gray-500 hover:text-black">
     <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
   </button>
-  <span className="font-bold ml-2">Impromptu</span>
+  <span className="font-bold ml-2">ImpromptuAI</span>
 </div>
 <div className="flex items-center gap-4">
 <button className="p-2 text-gray-400 hover:text-gray-600">

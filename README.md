@@ -110,14 +110,13 @@ Allows logged-in users to create a session and generate a unique speech topic us
 Captures audio on the frontend, securely uploads it, and evaluates speech characteristics in a distributed background queue.
 
 **Components & Architecture:**
-- **Secure AWS S3 Storage**: Audio is uploaded directly to a private S3 bucket. Express generates short-lived Pre-Signed GET URLs (valid for 15 minutes) for the AI worker to securely access the audio without needing AWS credentials.
-- **Job Queuing (Redis & RQ)**: Express triggers the processing by sending an HTTP request to FastAPI (`POST /api/evaluate/enqueue`), which safely enqueues the job into Redis using `rq`.
+- **Secure AWS S3 Storage**: Audio is uploaded directly to a private S3 bucket by the frontend using a Pre-Signed PUT URL, avoiding Node.js memory bottlenecks. Express then generates short-lived Pre-Signed GET URLs (valid for 15 minutes) for the AI worker to securely access the audio.
+- **Job Queuing (Redis & RQ)**: Express queries the user's past session history, embeds it into a payload, and triggers processing by sending an HTTP request to FastAPI (`POST /api/evaluate/enqueue`), which safely enqueues the job into Redis using `rq`.
 - **Parallel AI Processing**: The RQ worker securely downloads the temporary audio file and runs concurrent processes:
-  - Speech transcription using `openai-whisper`.
+  - Fast cloud-based speech transcription using Groq's Whisper API to eliminate local GPU/OOM risks.
   - Deterministic metrics calculation (pitch, fillers, articulation, energy, speaking rate) using `librosa` and `parselmouth`.
-  - Fetching user history to check for long-term improvement.
-- **Gemini Evaluation**: The combined metrics and past context are passed to Gemini 1.5 Pro to generate a strict, highly-structured JSON evaluation (Summary, Strengths, Weaknesses, Tips, and Score out of 10).
-- **Webhook Delivery**: The AI worker POSTs the final payload back to Express (`POST /api/webhooks/evaluation-result`), which stores the metrics and report in the database for the user to view.
+- **Gemini Evaluation**: The combined metrics and past context are passed to a Multi-Agent evaluation pipeline (Delivery Agent, Content Agent, Overall Coach) via Gemini to generate a highly-structured JSON evaluation. Agents execute in parallel for speed.
+- **Webhook Delivery**: The AI worker POSTs the final payload back to Express (`POST /api/webhooks/evaluation-result`), protected by an exponential backoff retry loop (using tenacity) to ensure delivery even if the backend is restarting. Express stores the metrics and report in the database for the user to view.
 
 ### Phase 4: Job Processing Stability & Logging
 Ensures the background evaluation pipeline is robust, especially on local development environments like Windows.

@@ -1,16 +1,14 @@
 const express = require('express');
-const multer = require('multer');
 const { createSession, getSessionEvaluation, getSession } = require('../controllers/sessionController');
-const { uploadAudio } = require('../controllers/audioController');
+const { generateUploadUrl, confirmUpload } = require('../controllers/audioController');
 const authMiddleware = require('../middleware/authMiddleware');
 
 const router = express.Router();
 
-const upload = multer({ storage: multer.memoryStorage() });
-
 router.post('/', authMiddleware, createSession);
 router.get('/:id', authMiddleware, getSession);
-router.post('/:id/audio', authMiddleware, upload.single('audio'), uploadAudio);
+router.post('/:id/audio/url', authMiddleware, generateUploadUrl);
+router.post('/:id/audio/confirm', authMiddleware, confirmUpload);
 router.get('/:id/evaluation', authMiddleware, getSessionEvaluation);
 
 module.exports = router;

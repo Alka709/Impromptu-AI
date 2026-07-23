@@ -1,84 +1,68 @@
-"""Transcription using Faster Whisper."""
+"""Transcription using Groq Whisper API (OpenAI Compatible)."""
 
+import os
 import logging
 from typing import Any
+from openai import OpenAI
+from tenacity import retry, wait_random_exponential, stop_after_attempt
+import openai
 
-from faster_whisper import WhisperModel
-
-from speech_analysis.config import WHISPER_COMPUTE_TYPE, WHISPER_DEVICE, WHISPER_MODEL_SIZE
 from speech_analysis.utils import round_val, timed
 
 logger = logging.getLogger(__name__)
 
+client = None
+api_key = os.environ.get("GROQ_API_KEY") or os.environ.get("OPENAI_API_KEY")
+if api_key:
+    client = OpenAI(
+        api_key=api_key,
+        base_url="https://api.groq.com/openai/v1"
+    )
 
+@retry(wait=wait_random_exponential(min=1, max=60), stop=stop_after_attempt(6), retry_error_callback=lambda retry_state: logger.error(f"Failed after {retry_state.attempt_number} attempts"))
 @timed
 def transcribe(audio_path: str) -> dict[str, Any]:
-    """Transcribe an audio file with Faster Whisper and return structured data.
+    """Transcribe an audio file with Whisper API and return structured data.
 
     Args:
-        audio_path: Path to a ``.wav`` file (any sample rate accepted by
-            Faster Whisper).
+        audio_path: Path to a ``.wav`` file.
 
     Returns:
         Dictionary with keys ``transcript``, ``words``, ``language``,
         and ``language_probability``.
     """
-    model = _load_model()
-    segments_gen, info = model.transcribe(
-        audio_path,
-        language="en",
-        task="transcribe",
-        beam_size=5,
-        word_timestamps=True,
-        vad_filter=True,
-    )
+    if not client:
+        logger.error("API key is missing, cannot transcribe")
+        return {"transcript": "", "words": [], "language": "en", "language_probability": 1.0}
 
+    logger.info("Transcribing via Groq Whisper API")
+    with open(audio_path, "rb") as audio_file:
+        transcription = client.audio.transcriptions.create(
+            model="whisper-large-v3-turbo",
+            file=audio_file,
+            response_format="verbose_json",
+            timestamp_granularities=["word"]
+        )
+    
     words: list[dict[str, Any]] = []
-    transcript_parts: list[str] = []
+    
+    word_data = getattr(transcription, "words", [])
+    
+    for w in word_data:
+        words.append(
+            {
+                "word": w.word.strip(),
+                "start": round_val(w.start, 3),
+                "end": round_val(w.end, 3),
+                "probability": 1.0,
+            }
+        )
 
-    for segment in segments_gen:
-        transcript_parts.append(segment.text.strip())
-        if segment.words:
-            for w in segment.words:
-                words.append(
-                    {
-                        "word": w.word.strip(),
-                        "start": round_val(w.start, 3),
-                        "end": round_val(w.end, 3),
-                        "probability": round_val(w.probability, 3),
-                    }
-                )
-
-    transcript = " ".join(transcript_parts)
-    logger.info(
-        "Transcription complete — %d words, language=%s (%.2f)",
-        len(words),
-        info.language,
-        info.language_probability,
-    )
+    logger.info("Transcription complete — %d words", len(words))
 
     return {
-        "transcript": transcript,
+        "transcript": transcription.text,
         "words": words,
-        "language": info.language,
-        "language_probability": round_val(info.language_probability, 3),
+        "language": getattr(transcription, "language", "en"),
+        "language_probability": 1.0,
     }
-
-
-def _load_model() -> WhisperModel:
-    """Instantiate the Faster Whisper model.
-
-    Returns:
-        A ``WhisperModel`` instance.
-    """
-    logger.info(
-        "Loading Faster Whisper model=%s device=%s compute=%s",
-        WHISPER_MODEL_SIZE,
-        WHISPER_DEVICE,
-        WHISPER_COMPUTE_TYPE,
-    )
-    return WhisperModel(
-        WHISPER_MODEL_SIZE,
-        device=WHISPER_DEVICE,
-        compute_type=WHISPER_COMPUTE_TYPE,
-    )

@@ -2,14 +2,29 @@ const express = require('express');
 const logger = require('./telemetry/logger');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
+const rateLimit = require('express-rate-limit');
 require('dotenv').config();
 
 const authRoutes = require('./routes/authRoutes');
 const sessionRoutes = require('./routes/sessionRoutes');
 const userRoutes = require('./routes/userRoutes');
 const webhookRoutes = require('./routes/webhookRoutes');
+const adminRoutes = require('./routes/admin.routes');
 
 const app = express();
+
+// Rate Limiters
+const globalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, 
+  max: 100, 
+  message: { error: 'Too many requests, please try again later.' }
+});
+
+const sessionLimiter = rateLimit({
+  windowMs: 60 * 1000, 
+  max: 20, 
+  message: { error: 'Too many session requests, please try again later.' }
+});
 
 // Middleware
 app.use(cors({
@@ -18,12 +33,14 @@ app.use(cors({
 }));
 app.use(express.json({ limit: '10mb' }));
 app.use(cookieParser());
+app.use('/api/', globalLimiter);
 
 // Routes
 app.use('/api/auth', authRoutes);
-app.use('/api/sessions', sessionRoutes);
+app.use('/api/sessions', sessionLimiter, sessionRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/webhooks', webhookRoutes);
+app.use('/api/admin', adminRoutes);
 
 // Frontend Logging Proxy
 app.post('/api/logs', (req, res) => {

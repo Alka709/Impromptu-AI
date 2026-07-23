@@ -52,15 +52,15 @@ class EvaluationPipeline:
             history=history,
         )
 
-        # Step 2: Delivery evaluation
-        delivery_report = self.delivery_agent.evaluate(
-            aggregated["delivery"]
-        )
+        import concurrent.futures
 
-        # Step 3: Content evaluation
-        content_report = self.content_agent.evaluate(
-            aggregated["content"]
-        )
+        # Step 2 & 3: Run Delivery and Content evaluation in parallel to speed up LLM calls
+        with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
+            delivery_future = executor.submit(self.delivery_agent.evaluate, aggregated["delivery"])
+            content_future = executor.submit(self.content_agent.evaluate, aggregated["content"])
+            
+            delivery_report = delivery_future.result()
+            content_report = content_future.result()
 
         # Step 4: Final coaching evaluation
         final_report = self.overall_coach.evaluate(

@@ -57,11 +57,11 @@ const signup = async (req, res) => {
     // Insert user (automatically marking as verified since OTP is disabled)
     const [newUser] = await db.insert(users)
       .values({ email: normalizedEmail, name, password_hash: passwordHash, verified: true })
-      .returning({ id: users.id, email: users.email, name: users.name });
+      .returning({ id: users.id, email: users.email, name: users.name, role: users.role });
 
     // Generate JWT and log them in immediately
     const token = jwt.sign(
-      { id: newUser.id, email: newUser.email },
+      { id: newUser.id, email: newUser.email, name: newUser.name, role: newUser.role },
       process.env.JWT_SECRET,
       { expiresIn: process.env.JWT_EXPIRATION || '1d' }
     );
@@ -121,7 +121,7 @@ const login = async (req, res) => {
 
     // Generate JWT
     const token = jwt.sign(
-      { id: user.id, email: user.email },
+      { id: user.id, email: user.email, name: user.name, role: user.role },
       process.env.JWT_SECRET,
       { expiresIn: process.env.JWT_EXPIRATION || '1d' }
     );

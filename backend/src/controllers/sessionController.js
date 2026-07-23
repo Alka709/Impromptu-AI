@@ -93,6 +93,16 @@ const getSessionEvaluation = async (req, res) => {
     const { id: sessionId } = req.params;
     const userId = req.user.id;
 
+    // First check if the session failed
+    const sessionList = await db.select().from(sessions).where(eq(sessions.id, sessionId));
+    if (!sessionList.length || sessionList[0].user_id !== userId) {
+      return res.status(404).json({ error: 'Session not found' });
+    }
+
+    if (sessionList[0].status === 'failed') {
+      return res.status(200).json({ status: 'failed', error: 'AI Evaluation failed. Please try again.' });
+    }
+
     // Fetch the report
     const records = await db.select().from(userPrevRecord)
       .where(eq(userPrevRecord.session_id, sessionId));

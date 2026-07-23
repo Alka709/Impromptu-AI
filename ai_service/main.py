@@ -1,8 +1,10 @@
 import os
 import google.generativeai as genai
-from fastapi import FastAPI, HTTPException, BackgroundTasks
+from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from dotenv import load_dotenv
+import redis
+from rq import Queue
 from worker import process_evaluation_job
 import json
 from telemetry import logger
@@ -10,6 +12,15 @@ from telemetry import logger
 load_dotenv(override=True)
 
 app = FastAPI()
+
+redis_url = os.environ.get("REDIS_URL")
+if not redis_url:
+    redis_host = os.environ.get("REDIS_HOST", "localhost")
+    redis_port = os.environ.get("REDIS_PORT", "6379")
+    redis_url = f"redis://{redis_host}:{redis_port}"
+
+redis_conn = redis.from_url(redis_url)
+q = Queue(connection=redis_conn)
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 if GEMINI_API_KEY:
@@ -25,6 +36,7 @@ class EvalRequest(BaseModel):
     topic: str
     audioDownloadUrl: str
     reportCallbackUrl: str
+    history: list = []
 
 
 @app.post("/generate_topic")
@@ -74,14 +86,15 @@ async def generate_topic(request: TopicRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/evaluate/enqueue")
-async def enqueue_evaluation(request: EvalRequest, background_tasks: BackgroundTasks):
+async def enqueue_evaluation(request: EvalRequest):
     try:
-        logger.info("Enqueueing evaluation job natively", extra={"session_id": request.sessionId, "user_id": request.userId})
-        background_tasks.add_task(process_evaluation_job, request.dict())
-        return {"message": "Job enqueued natively", "job_id": request.sessionId}
+        logger.info("Enqueueing evaluation job to Redis", extra={"session_id": request.sessionId, "user_id": request.userId})
+        job = q.enqueue(process_evaluation_job, request.dict(), job_timeout="10m")
+        logger.info("Successfully enqueued job to Redis", extra={"job_id": job.id, "session_id": request.sessionId})
+        return {"message": "Job enqueued to Redis", "job_id": job.id, "session_id": request.sessionId}
     except Exception as e:
-        logger.error(f"Failed to enqueue job: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail="Could not enqueue job natively")
+        logger.error(f"Failed to enqueue job to Redis: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Could not enqueue job to Redis")
 
 @app.get("/health")
 def health_check():

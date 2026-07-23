@@ -69,7 +69,7 @@ export default function MainLayout({ user, logout }) {
               )}
             </svg>
           </button>
-          <span className="text-2xl font-extrabold tracking-tight">Impromptu</span>
+          <span className="text-2xl font-extrabold tracking-tight">ImpromptuAI</span>
         </div>
         <div className="flex items-center space-x-4">
           <button aria-label="Profile" className="p-1 border border-gray-200 rounded-full hover:border-gray-400 transition-colors">

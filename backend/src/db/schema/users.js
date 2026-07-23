@@ -13,6 +13,7 @@ const users = pgTable('users', {
   // google_id for OAuth-linked accounts
   google_id: text('google_id').unique(),
   verified: boolean('verified').notNull().default(false),
+  role: text('role').notNull().default('user'),
   created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updated_at: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 }, (table) => ({

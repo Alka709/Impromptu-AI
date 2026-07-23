@@ -154,6 +154,7 @@ const handleGoogleCallback = async (req, res) => {
             name: users.name,
             google_id: users.google_id,
             created_at: users.created_at,
+            role: users.role,
           });
         user = updated;
       } else {
@@ -172,6 +173,7 @@ const handleGoogleCallback = async (req, res) => {
             name: users.name,
             google_id: users.google_id,
             created_at: users.created_at,
+            role: users.role,
           });
         user = newUser;
       }
@@ -179,7 +181,7 @@ const handleGoogleCallback = async (req, res) => {
 
     // ── 2d. Issue JWT cookie (same as email/password login) ──────────────────
     const token = jwt.sign(
-      { id: user.id, email: user.email },
+      { id: user.id, email: user.email, name: user.name, role: user.role },
       process.env.JWT_SECRET,
       { expiresIn: process.env.JWT_EXPIRATION || '1d' }
     );

@@ -52,7 +52,7 @@ export default function LoginPage({ setUser }) {
 <header className="fixed top-0 left-0 w-full z-10 px-8 py-4 flex justify-between items-center bg-transparent pointer-events-none">
 {/*  Brand Name  */}
 <div className="pointer-events-auto">
-<h1 className="text-xl font-bold tracking-tight">Impromptu</h1>
+<h1 className="text-xl font-bold tracking-tight">ImpromptuAI</h1>
 </div>
 </header>
 <main className="min-h-screen flex flex-col lg:flex-row w-full">

@@ -32,6 +32,8 @@ services:
       - ../ai_service/.env
     networks:
       - ai-network
+    deploy:
+      replicas: 3
     restart: unless-stopped
 
 networks:

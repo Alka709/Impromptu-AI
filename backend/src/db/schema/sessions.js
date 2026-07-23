@@ -11,6 +11,7 @@ const sessions = pgTable('sessions', {
   topic: text('topic').notNull(),
   hints: json('hints').default([]).notNull(),
   audio_url: text('audio_url'),
+  status: varchar('status', { length: 20 }).default('pending').notNull(),
   created_at: timestamp('created_at').defaultNow().notNull(),
 });
 
