@@ -45,7 +45,6 @@ services:
       - "8000:8000"
     volumes:
       - ./ai_service:/app
-      - hf_cache:/home/appuser/.cache/huggingface
     environment:
       - REDIS_HOST=redis
       - REDIS_PORT=6379
@@ -66,7 +65,6 @@ services:
       replicas: 3
     volumes:
       - ./ai_service:/app
-      - hf_cache:/home/appuser/.cache/huggingface
     environment:
       - REDIS_HOST=redis
       - REDIS_PORT=6379
@@ -129,4 +127,3 @@ networks:
 
 volumes:
   redis_data:
-  hf_cache:
