@@ -105,7 +105,7 @@ function FilterPill({ label, active, onClick }) {
   return (
     <button
       onClick={onClick}
-      className={`px-4 py-1.5 rounded-md text-sm font-semibold border transition-all duration-150 whitespace-nowrap ${
+      className={`px-4 py-1.5 rounded-xl text-sm font-semibold border transition-all duration-150 whitespace-nowrap ${
         active
           ? 'bg-[#111111] text-white border-[#111111]'
           : 'bg-white text-[#444444] border-[#ECECEC] hover:border-[#AAAAAA] hover:text-[#111111]'
@@ -135,8 +135,8 @@ function SessionCard({ session, index, isLatest }) {
       tabIndex={0}
       onKeyDown={(e) => e.key === 'Enter' && navigate(`/session/${session.session_id}`)}
       aria-label={`View report for ${session.topic}`}
-      className="group relative bg-white border border-[#ECECEC] rounded-md px-6 py-5 cursor-pointer shadow-sm
-        hover:-translate-y-0.5 hover:shadow-md transition-all duration-200"
+      className="group relative bg-white border border-[#ECECEC] rounded-2xl px-6 py-5 cursor-pointer shadow-[0_2px_12px_rgba(0,0,0,0.04)]
+        hover:-translate-y-0.5 hover:shadow-[0_8px_24px_rgba(0,0,0,0.06)] transition-all duration-200"
     >
       {/* Latest session badge */}
       {isLatest && (
@@ -223,9 +223,9 @@ function EmptyState({ hasFilters, onClear, startNewSession }) {
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.35 }}
-      className="bg-white border border-[#ECECEC] rounded-md flex flex-col items-center justify-center py-20 px-8 text-center shadow-sm"
+      className="bg-white border border-[#ECECEC] rounded-2xl flex flex-col items-center justify-center py-20 px-8 text-center shadow-[0_2px_12px_rgba(0,0,0,0.04)]"
     >
-      <div className="w-16 h-16 rounded-md bg-[#EAF5ED] flex items-center justify-center mb-5">
+      <div className="w-16 h-16 rounded-2xl bg-[#EAF5ED] flex items-center justify-center mb-5">
         <Mic size={28} className="text-[#16A34A]" strokeWidth={1.8} />
       </div>
       <h3 className="text-lg font-bold text-[#111111] mb-2">
@@ -246,7 +246,7 @@ function EmptyState({ hasFilters, onClear, startNewSession }) {
       ) : (
         <button
           onClick={startNewSession}
-          className="inline-flex items-center gap-2 bg-[#111111] text-white text-sm font-semibold px-5 py-2.5 rounded-md hover:bg-black transition-colors"
+          className="inline-flex items-center gap-2 bg-[#111111] text-white text-sm font-semibold px-5 py-2.5 rounded-xl hover:bg-black transition-colors"
         >
           Start your first session
           <ArrowRight size={14} />
@@ -260,7 +260,7 @@ function EmptyState({ hasFilters, onClear, startNewSession }) {
 function SessionCardSkeleton({ index }) {
   return (
     <div
-      className="bg-white border border-[#ECECEC] rounded-md px-6 py-5 animate-pulse"
+      className="bg-white border border-[#ECECEC] rounded-2xl px-6 py-5 animate-pulse"
       style={{ animationDelay: `${index * 80}ms` }}
     >
       <div className="flex items-start gap-4">
@@ -359,8 +359,8 @@ export default function SessionHistoryScreen() {
         transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
         className="mb-8"
       >
-        <h1 className="text-3xl font-bold text-[#111111] tracking-tight">Session History</h1>
-        <p className="text-sm text-[#666666] mt-1.5">Review every speaking session you've completed.</p>
+        <h1 className="text-[32px] font-extrabold text-[#111111] tracking-tight">Session History</h1>
+        <p className="text-[15px] text-[#666666] mt-1.5">Review every speaking session you've completed.</p>
       </motion.div>
 
       {/* ── Filters Bar ── */}

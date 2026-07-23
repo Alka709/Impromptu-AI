@@ -149,7 +149,7 @@ function computeRadarData(history) {
 ───────────────────────────────────────────── */
 function SkeletonCard({ h = 'h-64' }) {
   return (
-    <div className={`bg-white border border-[#ECECEC] rounded-md ${h} animate-pulse`} />
+    <div className={`bg-white border border-[#ECECEC] rounded-2xl ${h} animate-pulse`} />
   );
 }
 
@@ -164,7 +164,7 @@ function EmptyState({ startNewSession }) {
       transition={{ duration: 0.4 }}
       className="flex flex-col items-center justify-center min-h-[60vh] text-center"
     >
-      <div className="w-16 h-16 rounded-md bg-[#EAF5ED] flex items-center justify-center mb-5">
+      <div className="w-16 h-16 rounded-2xl bg-[#EAF5ED] flex items-center justify-center mb-5">
         <TrendingUp size={28} className="text-[#16A34A]" strokeWidth={1.8} />
       </div>
       <h2 className="text-xl font-bold text-[#111111] mb-2">No progress yet</h2>
@@ -173,7 +173,7 @@ function EmptyState({ startNewSession }) {
       </p>
       <button
         onClick={startNewSession}
-        className="inline-flex items-center gap-2 bg-[#111111] text-white text-sm font-semibold px-5 py-2.5 rounded-md hover:bg-black transition-colors"
+        className="inline-flex items-center gap-2 bg-[#111111] text-white text-sm font-semibold px-5 py-2.5 rounded-xl hover:bg-black transition-colors"
       >
         Start Practicing
         <ArrowRight size={14} />
@@ -263,8 +263,8 @@ export default function ProgressScreen() {
         transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
         className="mb-8"
       >
-        <h1 className="text-3xl font-bold text-[#111111] tracking-tight">Your Progress</h1>
-        <p className="text-sm text-[#666666] mt-1.5">Track your communication growth over time.</p>
+        <h1 className="text-[32px] font-extrabold text-[#111111] tracking-tight">Your Progress</h1>
+        <p className="text-[15px] text-[#666666] mt-1.5">Track your communication growth over time.</p>
       </motion.div>
 
       {/* ── Loading ── */}

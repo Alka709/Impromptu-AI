@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
+import { motion } from 'framer-motion';
 
 export default function SettingsScreen() {
   const { user, logout } = useOutletContext();
@@ -26,14 +27,12 @@ export default function SettingsScreen() {
     const file = e.target.files[0];
     if (file) {
       if (file.size > 2 * 1024 * 1024) {
-         setToast({ type: 'error', message: 'File is too large (max 2MB)' });
-         setTimeout(() => setToast(null), 3000);
-         return;
+        setToast({ type: 'error', message: 'File is too large (max 2MB)' });
+        setTimeout(() => setToast(null), 3000);
+        return;
       }
       const reader = new FileReader();
-      reader.onloadend = () => {
-        setPhotoData(reader.result);
-      };
+      reader.onloadend = () => setPhotoData(reader.result);
       reader.readAsDataURL(file);
     }
   };
@@ -45,29 +44,24 @@ export default function SettingsScreen() {
       setTimeout(() => setToast(null), 3000);
       return;
     }
-    
     setIsSaving(true);
     try {
       const payload = { name, currentPassword, newPassword };
-      if (photoData !== user?.photo) {
-        payload.photo = photoData;
-      }
+      if (photoData !== user?.photo) payload.photo = photoData;
       const res = await fetch(`${API_BASE}/users/${user.id}/profile`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify(payload)
+        body: JSON.stringify(payload),
       });
       const data = await res.json();
       if (res.ok) {
         setToast({ type: 'success', message: 'Profile updated successfully!' });
-        setCurrentPassword('');
-        setNewPassword('');
-        setConfirmPassword('');
+        setCurrentPassword(''); setNewPassword(''); setConfirmPassword('');
       } else {
         setToast({ type: 'error', message: data.error || 'Failed to update profile' });
       }
-    } catch (err) {
+    } catch {
       setToast({ type: 'error', message: 'An unexpected error occurred' });
     } finally {
       setIsSaving(false);
@@ -81,51 +75,64 @@ export default function SettingsScreen() {
     try {
       const res = await fetch(`${API_BASE}/users/${user.id}`, {
         method: 'DELETE',
-        credentials: 'include'
+        credentials: 'include',
       });
       if (res.ok) {
         logout();
       } else {
         const data = await res.json();
         setToast({ type: 'error', message: data.error || 'Failed to delete account' });
-        setIsDeleting(false);
-        setShowDeleteModal(false);
+        setTimeout(() => setToast(null), 3000);
       }
-    } catch (err) {
+    } catch {
       setToast({ type: 'error', message: 'An unexpected error occurred' });
+      setTimeout(() => setToast(null), 3000);
+    } finally {
       setIsDeleting(false);
       setShowDeleteModal(false);
     }
   };
 
+  const inputCls = 'w-full bg-[#FAFAF8] border border-[#ECECEC] rounded-xl px-4 py-3 text-[15px] text-[#111111] font-medium focus:outline-none focus:border-[#111111] transition-colors';
+  const disabledInputCls = 'w-full bg-[#F5F5F4] border border-[#ECECEC] rounded-xl px-4 py-3 text-[15px] text-[#888888] font-medium cursor-not-allowed';
+  const labelCls = 'block text-xs font-bold text-[#666666] uppercase tracking-widest mb-2';
+
   return (
-    <div className="relative min-h-screen pb-24">
-      {/* Toast Notification */}
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.3, ease: 'easeOut' }}
+      className="relative min-h-screen pb-24 px-6 md:px-10 lg:px-14 py-10"
+    >
+      {/* Toast */}
       {toast && (
-        <div className={`fixed top-8 left-1/2 -translate-x-1/2 z-50 px-6 py-3 rounded-full shadow-xl flex items-center gap-3 transition-all animate-fade-in-down ${toast.type === 'success' ? 'bg-emerald-500 text-white' : 'bg-red-500 text-white'}`}>
+        <div className={`fixed top-6 left-1/2 -translate-x-1/2 z-50 px-5 py-3 rounded-xl shadow-lg flex items-center gap-2.5 text-sm font-semibold transition-all ${toast.type === 'success' ? 'bg-[#16A34A] text-white' : 'bg-rose-500 text-white'}`}>
           {toast.type === 'success' ? (
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" /></svg>
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" /></svg>
           ) : (
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
           )}
-          <span className="font-bold text-sm">{toast.message}</span>
+          {toast.message}
         </div>
       )}
 
+      <div className="max-w-3xl">
+        {/* Page heading */}
+        <div className="mb-8">
+          <h1 className="text-[32px] font-extrabold text-[#111111] tracking-tight">Settings</h1>
+          <p className="text-[#666666] text-[15px] mt-1">Manage your account and preferences.</p>
+        </div>
 
-      
-      <div className="max-w-4xl mx-auto py-8 md:py-12 px-4 md:px-8">
-        <h2 className="text-4xl font-extrabold text-zinc-900 tracking-tight mb-8">Settings</h2>
-        
-        <nav className="flex flex-wrap gap-4 md:gap-8 border-b border-zinc-200 mb-8" data-purpose="tab-navigation">
+        {/* Tab navigation */}
+        <nav className="flex gap-1 mb-8 border-b border-[#ECECEC]">
           {tabs.map(tab => (
-            <button 
+            <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`pb-4 px-1 font-medium text-sm border-b-2 transition-colors ${
-                activeTab === tab 
-                ? 'border-indigo-600 text-indigo-600 font-bold' 
-                : 'border-transparent text-zinc-500 hover:text-zinc-800'
+              className={`pb-3 px-4 text-[14px] font-semibold border-b-2 transition-colors ${
+                activeTab === tab
+                  ? 'border-[#111111] text-[#111111]'
+                  : 'border-transparent text-[#888888] hover:text-[#444444]'
               }`}
             >
               {tab}
@@ -133,11 +140,18 @@ export default function SettingsScreen() {
           ))}
         </nav>
 
-        <div className="space-y-6">
+        <div>
+          {/* ── Account Tab ── */}
           {activeTab === 'Account' && (
-            <section className="bg-white rounded-3xl border border-zinc-100 p-10 shadow-sm animate-fade-in">
-              <div className="flex flex-col sm:flex-row items-center sm:items-start space-y-4 sm:space-y-0 sm:space-x-6 mb-10 text-center sm:text-left">
-                <div className="w-20 h-20 rounded-full bg-indigo-50 border border-indigo-100 flex items-center justify-center font-extrabold text-2xl text-indigo-600 shadow-sm overflow-hidden shrink-0">
+            <motion.section
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.25 }}
+              className="bg-white border border-[#ECECEC] rounded-2xl shadow-[0_2px_12px_rgba(0,0,0,0.04)] p-8"
+            >
+              {/* Avatar row */}
+              <div className="flex items-center gap-5 mb-8 pb-8 border-b border-[#F0F0F0]">
+                <div className="w-16 h-16 rounded-full bg-[#F5F5F4] border border-[#ECECEC] flex items-center justify-center font-extrabold text-xl text-[#111111] overflow-hidden shrink-0">
                   {photoData ? (
                     <img src={photoData} alt="Profile" className="w-full h-full object-cover" />
                   ) : (
@@ -145,186 +159,196 @@ export default function SettingsScreen() {
                   )}
                 </div>
                 <div>
-                   <input type="file" accept="image/*" className="hidden" ref={fileInputRef} onChange={handlePhotoSelect} />
-                   <button type="button" onClick={() => fileInputRef.current?.click()} className="text-sm font-bold text-zinc-600 border border-zinc-200 px-4 py-2 rounded-full hover:bg-zinc-50 hover:text-indigo-600 transition-colors">Change Photo</button>
+                  <p className="text-[15px] font-semibold text-[#111111]">{name || 'Your Name'}</p>
+                  <p className="text-[13px] text-[#888888]">{user?.email}</p>
+                  <input type="file" accept="image/*" className="hidden" ref={fileInputRef} onChange={handlePhotoSelect} />
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="mt-2 text-[13px] font-semibold text-[#666666] border border-[#ECECEC] bg-white px-3 py-1.5 rounded-xl hover:bg-[#F5F5F4] transition-colors"
+                  >
+                    Change photo
+                  </button>
                 </div>
               </div>
-              
-              <hr className="mb-10 border-zinc-100"/>
-              
-              <form className="space-y-10" onSubmit={handleSave}>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                  <div className="space-y-3">
-                    <label className="text-xs font-bold text-zinc-500 uppercase tracking-widest">Full Name</label>
-                    <input 
-                      className="w-full rounded-xl border-zinc-200 bg-zinc-50 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 text-base py-3 px-4 border transition-all font-medium text-zinc-900" 
-                      type="text" 
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                    />
+
+              <form className="space-y-8" onSubmit={handleSave}>
+                {/* Name + Email */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className={labelCls}>Full Name</label>
+                    <input className={inputCls} type="text" value={name} onChange={e => setName(e.target.value)} />
                   </div>
-                  <div className="space-y-3">
-                    <label className="text-xs font-bold text-zinc-500 uppercase tracking-widest">Email Address</label>
+                  <div>
+                    <label className={labelCls}>Email Address</label>
                     <div className="relative">
-                      <input 
-                        className="w-full rounded-xl border-zinc-200 bg-zinc-100 text-zinc-500 text-base py-3 px-4 pr-24 border cursor-not-allowed font-medium" 
-                        type="email" 
-                        value={user?.email || ''} 
-                        disabled
-                      />
-                      <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-bold text-emerald-600 flex items-center bg-emerald-50 px-2 py-1 rounded-md">
-                        <svg className="w-3.5 h-3.5 mr-1" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>
+                      <input className={disabledInputCls} type="email" value={user?.email || ''} disabled />
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-bold text-[#16A34A] bg-green-50 px-2 py-1 rounded-lg">
                         {user?.google_id ? 'Google' : 'Verified'}
                       </span>
                     </div>
                   </div>
                 </div>
-                
+
+                {/* Password change */}
                 {!user?.google_id && (
-                  <div className="space-y-6 pt-6 border-t border-zinc-100">
+                  <div className="space-y-5 pt-6 border-t border-[#F0F0F0]">
                     <div>
-                      <h4 className="text-lg font-bold text-zinc-900 mb-1">Change Password</h4>
-                      <p className="text-sm text-zinc-500 font-medium">Leave blank if you don't want to change your password.</p>
+                      <h3 className="text-[16px] font-bold text-[#111111] mb-0.5">Change Password</h3>
+                      <p className="text-[13px] text-[#888888]">Leave blank if you don't want to change your password.</p>
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                      <div className="space-y-3">
-                        <label className="text-xs font-bold text-zinc-500 uppercase tracking-widest">Current Password</label>
-                        <input 
-                          className="w-full rounded-xl border-zinc-200 bg-zinc-50 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 py-3 px-4 border transition-all" 
-                          type="password"
-                          value={currentPassword}
-                          onChange={(e) => setCurrentPassword(e.target.value)}
-                        />
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                      <div>
+                        <label className={labelCls}>Current Password</label>
+                        <input className={inputCls} type="password" value={currentPassword} onChange={e => setCurrentPassword(e.target.value)} />
                       </div>
-                      <div className="space-y-3">
-                        <label className="text-xs font-bold text-zinc-500 uppercase tracking-widest">New Password</label>
-                        <input 
-                          className="w-full rounded-xl border-zinc-200 bg-zinc-50 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 py-3 px-4 border transition-all" 
-                          type="password"
-                          value={newPassword}
-                          onChange={(e) => setNewPassword(e.target.value)}
-                        />
+                      <div>
+                        <label className={labelCls}>New Password</label>
+                        <input className={inputCls} type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} />
                       </div>
-                      <div className="space-y-3">
-                        <label className="text-xs font-bold text-zinc-500 uppercase tracking-widest">Confirm Password</label>
-                        <input 
-                          className="w-full rounded-xl border-zinc-200 bg-zinc-50 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 py-3 px-4 border transition-all" 
-                          type="password"
-                          value={confirmPassword}
-                          onChange={(e) => setConfirmPassword(e.target.value)}
-                        />
+                      <div>
+                        <label className={labelCls}>Confirm Password</label>
+                        <input className={inputCls} type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} />
                       </div>
                     </div>
                   </div>
                 )}
-                
-                <div className="flex justify-end pt-6 border-t border-zinc-100">
-                  <button 
+
+                <div className="flex justify-end pt-4 border-t border-[#F0F0F0]">
+                  <button
                     disabled={isSaving}
-                    className={`bg-indigo-600 text-white px-8 py-3.5 rounded-full font-bold shadow-lg hover:bg-indigo-700 hover:shadow-xl transition-all active:scale-95 flex items-center gap-2 ${isSaving ? 'opacity-70 cursor-not-allowed' : ''}`} 
                     type="submit"
+                    className="bg-[#111111] text-white px-7 py-2.5 rounded-xl text-[14px] font-bold hover:bg-black transition-colors disabled:opacity-50 flex items-center gap-2"
                   >
-                    {isSaving ? (
-                      <>
-                        <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                        Saving...
-                      </>
-                    ) : 'Save Changes'}
+                    {isSaving && (
+                      <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                      </svg>
+                    )}
+                    {isSaving ? 'Saving…' : 'Save Changes'}
                   </button>
                 </div>
               </form>
-            </section>
+            </motion.section>
           )}
-          
+
+          {/* ── Connected Accounts Tab ── */}
           {activeTab === 'Connected Accounts' && (
-            <section className="bg-white rounded-3xl border border-zinc-100 p-10 shadow-sm animate-fade-in" data-purpose="connected-accounts">
-              <h4 className="text-lg font-bold text-zinc-900 mb-6">Connected Accounts</h4>
-              <div className="flex flex-col sm:flex-row items-center sm:justify-between p-6 bg-zinc-50 border border-zinc-100 rounded-2xl gap-4">
-                <div className="flex items-center space-x-4">
-                  <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm border border-zinc-100">
-                    <svg className="w-6 h-6" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" /><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" /><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" /><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" /></svg>
+            <motion.section
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.25 }}
+              className="bg-white border border-[#ECECEC] rounded-2xl shadow-[0_2px_12px_rgba(0,0,0,0.04)] p-8"
+              data-purpose="connected-accounts"
+            >
+              <h2 className="text-[18px] font-bold text-[#111111] mb-6">Connected Accounts</h2>
+              <div className="flex flex-col sm:flex-row items-center sm:justify-between p-5 bg-[#FAFAF8] border border-[#ECECEC] rounded-2xl gap-4">
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm border border-[#ECECEC]">
+                    <svg className="w-5 h-5" viewBox="0 0 24 24">
+                      <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
+                      <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
+                      <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
+                      <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
+                    </svg>
                   </div>
                   <div>
-                    <span className="block text-base font-bold text-zinc-900">Google Account</span>
-                    <span className="text-sm text-zinc-500 font-medium">Use Google to sign in to ImpromptuAI</span>
+                    <span className="block text-[15px] font-semibold text-[#111111]">Google Account</span>
+                    <span className="text-[13px] text-[#888888]">Use Google to sign in to ImpromptuAI</span>
                   </div>
                 </div>
-                <div className="flex items-center space-x-4">
+                <div className="flex items-center gap-3">
                   {user?.google_id ? (
                     <>
-                      <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-full border border-emerald-100">Connected</span>
-                      <button className="text-sm font-bold text-zinc-400 hover:text-zinc-700 transition-colors">Disconnect</button>
+                      <span className="text-[12px] font-bold text-[#16A34A] bg-green-50 px-3 py-1.5 rounded-lg border border-green-100">Connected</span>
+                      <button className="text-[13px] font-semibold text-[#888888] hover:text-[#111111] transition-colors">Disconnect</button>
                     </>
                   ) : (
-                    <button className="text-sm font-bold text-indigo-600 bg-indigo-50 border border-indigo-100 px-4 py-2 rounded-full hover:bg-indigo-100 transition-colors">Connect Google</button>
+                    <button className="text-[13px] font-semibold text-[#111111] bg-white border border-[#ECECEC] px-4 py-2 rounded-xl hover:bg-[#F5F5F4] transition-colors">Connect Google</button>
                   )}
                 </div>
               </div>
-            </section>
+            </motion.section>
           )}
-          
+
+          {/* ── Danger Zone Tab ── */}
           {activeTab === 'Danger Zone' && (
-            <section className="bg-rose-50/50 rounded-3xl border-2 border-rose-100 p-10 animate-fade-in" data-purpose="danger-zone">
-              <div className="mb-6 flex items-start gap-4">
-                <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm border border-rose-100 shrink-0">
-                  <svg className="w-6 h-6 text-rose-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+            <motion.section
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.25 }}
+              className="bg-white border border-rose-100 rounded-2xl shadow-[0_2px_12px_rgba(0,0,0,0.04)] p-8"
+              data-purpose="danger-zone"
+            >
+              <div className="flex items-start gap-4 mb-6">
+                <div className="w-10 h-10 bg-rose-50 rounded-xl flex items-center justify-center shrink-0 border border-rose-100">
+                  <svg className="w-5 h-5 text-rose-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
                 </div>
                 <div>
-                  <h4 className="text-xl font-bold text-rose-700 mb-2">Delete Account</h4>
-                  <p className="text-sm text-rose-600/80 font-medium leading-relaxed max-w-2xl">
-                    Permanently delete your account and all associated speaking data, historical sessions, and analytics. 
-                    <strong className="block mt-1 font-bold text-rose-700">This action is irreversible.</strong>
+                  <h2 className="text-[18px] font-bold text-rose-700 mb-1">Delete Account</h2>
+                  <p className="text-[14px] text-rose-600/80 leading-relaxed max-w-xl">
+                    Permanently delete your account and all associated speaking data, historical sessions, and analytics.{' '}
+                    <strong className="font-bold text-rose-700">This action is irreversible.</strong>
                   </p>
                 </div>
               </div>
-              <div className="pl-16">
-                <button onClick={() => setShowDeleteModal(true)} className="bg-white text-rose-600 border border-rose-200 shadow-sm rounded-full px-6 py-3 text-sm font-bold hover:bg-rose-600 hover:text-white transition-all active:scale-95">
-                  Yes, delete my account
-                </button>
-              </div>
-            </section>
+              <button
+                onClick={() => setShowDeleteModal(true)}
+                className="bg-white text-rose-600 border border-rose-200 rounded-xl px-5 py-2.5 text-[14px] font-bold hover:bg-rose-600 hover:text-white transition-all"
+              >
+                Delete my account
+              </button>
+            </motion.section>
           )}
         </div>
       </div>
 
+      {/* ── Delete Confirmation Modal ── */}
       {showDeleteModal && (
-        <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl animate-fade-in-up">
-            <div className="w-12 h-12 bg-rose-50 rounded-full flex items-center justify-center mb-6">
-              <svg className="w-6 h-6 text-rose-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.96, y: 8 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+            className="bg-white rounded-2xl p-7 max-w-md w-full shadow-2xl border border-[#ECECEC]"
+          >
+            <div className="w-10 h-10 bg-rose-50 rounded-xl flex items-center justify-center mb-5 border border-rose-100">
+              <svg className="w-5 h-5 text-rose-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
             </div>
-            <h3 className="text-2xl font-bold text-zinc-900 mb-2">Delete Account?</h3>
-            <p className="text-zinc-500 mb-6 font-medium">This action cannot be undone. All your data will be permanently removed.</p>
-            
-            <label className="block text-sm font-bold text-zinc-700 mb-2">Type <span className="text-rose-600">DELETE</span> to confirm</label>
-            <input 
-              type="text" 
+            <h3 className="text-[20px] font-bold text-[#111111] mb-1.5">Delete Account?</h3>
+            <p className="text-[14px] text-[#666666] mb-6">This action cannot be undone. All your data will be permanently removed.</p>
+            <label className="block text-[13px] font-bold text-[#444444] mb-2">Type <span className="text-rose-600">DELETE</span> to confirm</label>
+            <input
+              type="text"
               value={deleteConfirmationText}
-              onChange={(e) => setDeleteConfirmationText(e.target.value)}
-              className="w-full rounded-xl border-zinc-200 bg-zinc-50 py-3 px-4 focus:bg-white focus:border-rose-500 focus:ring-2 focus:ring-rose-200 transition-all font-bold text-zinc-900 mb-8"
+              onChange={e => setDeleteConfirmationText(e.target.value)}
+              className="w-full bg-[#FAFAF8] border border-[#ECECEC] rounded-xl px-4 py-2.5 text-[15px] font-bold text-[#111111] focus:outline-none focus:border-rose-400 transition-colors mb-6"
               placeholder="DELETE"
             />
-            
-            <div className="flex gap-4">
-              <button 
+            <div className="flex gap-3">
+              <button
                 onClick={() => { setShowDeleteModal(false); setDeleteConfirmationText(''); }}
-                className="flex-1 py-3 px-4 bg-zinc-100 hover:bg-zinc-200 text-zinc-900 font-bold rounded-full transition-colors"
+                className="flex-1 py-2.5 px-4 bg-[#F5F5F4] hover:bg-[#EBEBEA] text-[#111111] font-semibold rounded-xl text-[14px] transition-colors"
                 disabled={isDeleting}
               >
                 Cancel
               </button>
-              <button 
+              <button
                 onClick={handleDeleteAccount}
                 disabled={deleteConfirmationText !== 'DELETE' || isDeleting}
-                className="flex-1 py-3 px-4 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                className="flex-1 py-2.5 px-4 bg-rose-600 hover:bg-rose-700 text-white font-semibold rounded-xl text-[14px] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
               >
-                {isDeleting ? 'Deleting...' : 'Delete'}
+                {isDeleting ? 'Deleting…' : 'Delete Account'}
               </button>
             </div>
-          </div>
+          </motion.div>
         </div>
       )}
-
-    </div>
+    </motion.div>
   );
 }

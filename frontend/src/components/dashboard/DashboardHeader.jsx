@@ -23,10 +23,10 @@ export default function DashboardHeader({ user }) {
     >
       {/* Left: Greeting */}
       <div>
-        <h1 className="text-3xl font-bold text-[#111111] tracking-tight leading-none">
+        <h1 className="text-[32px] font-extrabold text-[#111111] tracking-tight leading-none">
           {getGreeting()}, {firstName}
         </h1>
-        <p className="text-sm text-[#666666] mt-2 font-normal">
+        <p className="text-[15px] text-[#666666] mt-2 font-normal">
           Let's continue improving your communication skills.
         </p>
       </div>

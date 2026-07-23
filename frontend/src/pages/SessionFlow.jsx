@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate, useParams, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import SessionHeader from '../components/report/SessionHeader';
@@ -208,42 +208,40 @@ export default function SessionFlow({ user, logout }) {
   }
 }
 
-function SpeechErrorScreen({ user }) {
+function SpeechErrorScreen({ user, logout }) {
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   return (
-    <div className="h-screen w-full flex flex-col bg-surface overflow-hidden">
-      <header className="h-16 border-b border-surface-dim bg-white flex items-center justify-between px-6 shrink-0">
-        <div className="flex items-center gap-2">
-          <span className="font-bold text-xl tracking-tight">ImpromptuAI</span>
-        </div>
-        <div className="flex items-center gap-4">
-          <div className="w-8 h-8 rounded-full bg-gray-200 border border-gray-300 flex items-center justify-center overflow-hidden">
-            <span className="text-xs font-bold text-gray-600">{user?.name?.charAt(0).toUpperCase()}</span>
-          </div>
-        </div>
+    <>
+      <header className="md:hidden fixed top-0 left-0 right-0 h-14 bg-white border-b border-[#ECECEC] flex items-center justify-between px-4 z-30">
+        <button onClick={() => setIsMobileMenuOpen(true)} className="p-2 rounded-xl text-[#666666] hover:bg-[#F5F5F4]" aria-label="Open menu">
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" /></svg>
+        </button>
+        <span className="text-[14px] font-semibold text-[#111111] tracking-tight">ImpromptuAI</span>
+        <div className="w-9" />
       </header>
-      <main className="flex-1 flex items-center justify-center bg-surface p-8">
-        <div className="max-w-md w-full text-center space-y-8">
-          <div className="w-24 h-24 mx-auto rounded-full bg-red-50 text-red-500 shadow-sm flex items-center justify-center border border-red-100">
-            <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+      <Sidebar user={user} logout={logout} startNewSession={() => {}} isMobileOpen={isMobileMenuOpen} onMobileClose={() => setIsMobileMenuOpen(false)} />
+      <main className="md:pl-60 min-h-screen bg-[#FAFAF8] pt-14 md:pt-0 flex items-center justify-center p-8">
+        <div className="max-w-md w-full text-center">
+          <div className="w-20 h-20 mx-auto rounded-2xl bg-rose-50 border border-rose-100 flex items-center justify-center mb-6">
+            <svg className="w-9 h-9 text-rose-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
             </svg>
           </div>
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight mb-2">Analysis Failed</h1>
-            <p className="text-gray-500 text-sm">Something went wrong while our AI was analyzing your speech. Please try again.</p>
-          </div>
-          <Link to="/" className="inline-block px-6 py-3 bg-black text-white rounded-full font-bold text-sm tracking-wide shadow hover:bg-gray-800 transition">
+          <h1 className="text-[28px] font-extrabold text-[#111111] tracking-tight mb-2">Analysis Failed</h1>
+          <p className="text-[#666666] text-[15px] mb-8 leading-relaxed">Something went wrong while our AI was analyzing your speech. Please try again.</p>
+          <Link to="/" className="inline-flex items-center gap-2 px-6 py-2.5 bg-[#111111] text-white rounded-xl font-semibold text-[14px] hover:bg-black transition-colors">
             Return to Dashboard
           </Link>
         </div>
       </main>
-    </div>
+    </>
   );
 }
 
 
 function SpeechPrepScreen({ user, logout, sessionData, timeLeft, startRecording }) {
   const [showHints, setShowHints] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const formatTime = (seconds) => {
     const m = Math.floor(seconds / 60);
@@ -252,131 +250,94 @@ function SpeechPrepScreen({ user, logout, sessionData, timeLeft, startRecording 
   };
 
   return (
-    <div className="min-h-[100dvh] w-full flex flex-col lg:flex-row bg-surface">
-<aside className="hidden lg:flex w-[240px] border-r border-gray-200 flex-col bg-white shrink-0" data-purpose="navigation-sidebar">
-<div className="p-6 border-b border-gray-100 flex items-center gap-2">
-<span className="font-bold text-lg tracking-tight">ImpromptuAI</span>
-</div>
-<nav className="flex-1 p-4 space-y-2">
-<div className="flex items-center gap-3 px-3 py-2 bg-gray-50 rounded-custom">
-<div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center text-xs font-semibold">{user?.name?.charAt(0).toUpperCase()}</div>
-<span className="text-sm font-medium">{user?.name}</span>
-</div>
-<div className="pt-4 space-y-1">
-<Link className="flex items-center gap-3 px-3 py-2 text-sm text-gray-400 hover:text-black" to="/">
-<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h7" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" /></svg>
-          Dashboard
-</Link>
-<Link className="flex items-center gap-3 px-3 py-2 text-sm text-gray-400 hover:text-black" to="/history">
-<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" /></svg>
-          Session History
-</Link>
-<Link className="flex items-center gap-3 px-3 py-2 text-sm text-gray-400 hover:text-black" to="/progress">
-<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" /></svg>
-          Progress
-</Link>
-</div>
-</nav>
-<div className="p-4 space-y-1 mt-auto">
-<Link className="flex items-center gap-3 px-3 py-2 text-sm text-gray-400 hover:text-black" to="/settings">
-<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" /></svg>
-        Settings
-</Link>
-<button onClick={logout} className="w-full flex items-center gap-3 px-3 py-2 text-sm text-gray-400 hover:text-black">
-<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" /></svg>
-        Logout
-</button>
-</div>
-</aside>
-<div className="flex-1 flex flex-col relative">
-<header className="h-16 px-4 md:px-8 flex items-center justify-between lg:justify-end border-b border-gray-100 bg-white shrink-0" data-purpose="top-header">
-<div className="lg:hidden font-bold text-lg tracking-tight">ImpromptuAI</div>
-<div className="flex items-center gap-4">
-<button className="text-gray-400 hover:text-black">
-<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" /></svg>
-</button>
-<button className="w-8 h-8 rounded-full border border-gray-200 flex items-center justify-center">
-<span className="font-bold text-gray-700 text-xs">{user?.name?.charAt(0).toUpperCase()}</span>
-</button>
-</div>
-</header>
-<div className="flex-1 overflow-y-auto p-4 md:pt-8 md:px-8 flex flex-col items-center relative bg-white">
-  <div className="w-full max-w-3xl flex flex-col items-center space-y-12 mt-2">
-    {/* Topic Section */}
-    <section className="text-center w-full">
-      <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-4">Today's Topic ({sessionData?.difficulty})</span>
-      <h2 className="text-3xl md:text-4xl font-extrabold max-w-2xl mx-auto leading-tight text-gray-900">
-        {sessionData?.topic}
-      </h2>
-      
-      {sessionData?.hints && sessionData.hints.length > 0 && (
-        <div className="mt-6 flex flex-col items-center">
-          {!showHints ? (
-            <button onClick={() => setShowHints(true)} className="text-sm font-bold text-gray-500 hover:text-black transition-colors flex items-center gap-2">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path></svg>
-              Need a hint?
-            </button>
-          ) : (
-            <div className="text-left bg-gray-50 p-6 rounded-2xl border border-gray-100 max-w-2xl w-full mt-4">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-xs font-bold uppercase tracking-widest text-gray-400">Hints</h3>
-                <button onClick={() => setShowHints(false)} className="text-gray-400 hover:text-black">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-                </button>
+    <>
+      {/* Mobile top bar */}
+      <header className="md:hidden fixed top-0 left-0 right-0 h-14 bg-white border-b border-[#ECECEC] flex items-center justify-between px-4 z-30">
+        <button onClick={() => setIsMobileMenuOpen(true)} className="p-2 rounded-xl text-[#666666] hover:bg-[#F5F5F4]" aria-label="Open menu">
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" /></svg>
+        </button>
+        <span className="text-[14px] font-semibold text-[#111111] tracking-tight">ImpromptuAI</span>
+        <div className="w-9" />
+      </header>
+      <Sidebar user={user} logout={logout} startNewSession={() => {}} isMobileOpen={isMobileMenuOpen} onMobileClose={() => setIsMobileMenuOpen(false)} />
+      <main className="md:pl-60 min-h-screen bg-[#FAFAF8] pt-14 md:pt-0 flex items-center justify-center px-6 py-12">
+        <div className="w-full max-w-2xl flex flex-col items-center gap-10">
+
+          {/* Topic */}
+          <section className="text-center w-full">
+            <span className="text-[11px] font-bold text-[#888888] uppercase tracking-widest block mb-3">
+              {sessionData?.difficulty?.toUpperCase()} · Prepare to speak
+            </span>
+            <h1 className="text-[36px] md:text-[44px] font-extrabold text-[#111111] leading-tight tracking-tight">
+              {sessionData?.topic}
+            </h1>
+
+            {sessionData?.hints && sessionData.hints.length > 0 && (
+              <div className="mt-6 flex flex-col items-center">
+                {!showHints ? (
+                  <button
+                    onClick={() => setShowHints(true)}
+                    className="text-[13px] font-semibold text-[#888888] hover:text-[#111111] transition-colors flex items-center gap-1.5"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" /></svg>
+                    Need a hint?
+                  </button>
+                ) : (
+                  <div className="text-left bg-white border border-[#ECECEC] rounded-2xl p-6 max-w-xl w-full mt-4 shadow-[0_2px_12px_rgba(0,0,0,0.04)]">
+                    <div className="flex justify-between items-center mb-4">
+                      <h3 className="text-[11px] font-bold uppercase tracking-widest text-[#888888]">Hints</h3>
+                      <button onClick={() => setShowHints(false)} className="text-[#888888] hover:text-[#111111]">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                      </button>
+                    </div>
+                    <ul className="space-y-3">
+                      {(() => {
+                        let parsedHints = sessionData.hints;
+                        if (typeof parsedHints === 'string') { try { parsedHints = JSON.parse(parsedHints); } catch { parsedHints = []; } }
+                        return Array.isArray(parsedHints) ? parsedHints.map((hint, idx) => (
+                          <li key={idx} className="flex gap-3 text-[14px] text-[#444444] leading-relaxed">
+                            <span className="text-[#AAAAAA] font-bold shrink-0">{idx + 1}.</span>
+                            <span>{hint}</span>
+                          </li>
+                        )) : null;
+                      })()}
+                    </ul>
+                  </div>
+                )}
               </div>
-              <ul className="space-y-3">
-                {(() => {
-                  let parsedHints = sessionData.hints;
-                  if (typeof parsedHints === 'string') {
-                    try { parsedHints = JSON.parse(parsedHints); } catch(e) { parsedHints = []; }
-                  }
-                  return Array.isArray(parsedHints) ? parsedHints.map((hint, idx) => (
-                    <li key={idx} className="flex gap-3 text-sm text-gray-700">
-                      <span className="text-gray-400 font-bold">{idx + 1}.</span>
-                      <span className="leading-relaxed">{hint}</span>
-                    </li>
-                  )) : null;
-                })()}
-              </ul>
+            )}
+          </section>
+
+          {/* Timer arc */}
+          <section className="flex flex-col items-center">
+            <div className="relative flex items-center justify-center h-32">
+              <svg className="w-48 h-24 overflow-visible">
+                <path className="text-[#ECECEC]" d="M 16 96 A 80 80 0 0 1 176 96" fill="transparent" stroke="currentColor" strokeWidth="8" strokeLinecap="round" />
+                <path className="text-[#111111] transition-all duration-1000 ease-linear" d="M 16 96 A 80 80 0 0 1 176 96" fill="transparent" stroke="currentColor" strokeDasharray="251.2" strokeDashoffset={251.2 - (timeLeft / 60) * 251.2} strokeWidth="8" strokeLinecap="round" />
+              </svg>
+              <div className="absolute top-14 text-center">
+                <span className="block text-[28px] font-extrabold tracking-tight text-[#111111]" style={{ fontVariantNumeric: 'tabular-nums' }}>{formatTime(timeLeft)}</span>
+                <span className="text-[10px] font-bold text-[#AAAAAA] uppercase tracking-widest mt-1 block">Prepare</span>
+              </div>
             </div>
-          )}
-        </div>
-      )}
-    </section>
+          </section>
 
-    {/* Timer Section */}
-    <section className="flex flex-col items-center justify-center pt-8">
-      <div className="relative flex items-center justify-center h-32">
-        <svg className="w-48 h-24 overflow-visible">
-          <path className="text-gray-100" d="M 16 96 A 80 80 0 0 1 176 96" fill="transparent" stroke="currentColor" strokeWidth="8" strokeLinecap="round" />
-          <path className="text-black transition-all duration-1000 ease-linear" d="M 16 96 A 80 80 0 0 1 176 96" fill="transparent" stroke="currentColor" strokeDasharray="251.2" strokeDashoffset={251.2 - (timeLeft / 60) * 251.2} strokeWidth="8" strokeLinecap="round" />
-        </svg>
-        <div className="absolute top-14 text-center w-full flex flex-col items-center">
-          <span className="block text-3xl font-extrabold tracking-tight" style={{ fontVariantNumeric: 'tabular-nums' }}>{formatTime(timeLeft)}</span>
-          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-2 block">Preparing</span>
+          {/* Start button */}
+          <section className="w-full max-w-xs">
+            <button
+              onClick={startRecording}
+              className="w-full bg-[#111111] text-white py-3.5 rounded-xl text-[14px] font-bold tracking-widest hover:bg-black transition-all flex items-center justify-center gap-2 shadow-[0_4px_20px_rgba(0,0,0,0.15)]"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" /></svg>
+              START SPEAKING
+            </button>
+            <p className="text-center text-[12px] text-[#AAAAAA] mt-3 font-medium">Microphone ready · 2 min recording</p>
+          </section>
         </div>
-      </div>
-    </section>
-
-    {/* Action Buttons */}
-    <section className="w-full max-w-xs mx-auto">
-      <button onClick={startRecording} className="w-full bg-black text-white py-4 rounded-full text-sm font-bold tracking-widest hover:bg-gray-900 transition-transform hover:scale-105 active:scale-95 shadow-xl shadow-black/10">
-        START SPEAKING
-      </button>
-      <div className="mt-6 flex items-center justify-center gap-6 text-gray-400">
-        <div className="flex items-center gap-2">
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" /></svg>
-          <span className="text-xs font-medium">Mic Ready</span>
-        </div>
-      </div>
-    </section>
-  </div>
-</div>
-</div>
-</div>
+      </main>
+    </>
   );
 }
-
 
 function LiveRecordingScreen({ user, logout, sessionData, timeLeft, stopRecording, audioStream }) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -384,38 +345,28 @@ function LiveRecordingScreen({ user, logout, sessionData, timeLeft, stopRecordin
 
   useEffect(() => {
     if (!audioStream) return;
-    
-    // Fallback if browser doesn't support AudioContext easily
     const AudioContext = window.AudioContext || window.webkitAudioContext;
     if (!AudioContext) return;
-
     const audioCtx = new AudioContext();
     const analyser = audioCtx.createAnalyser();
     const source = audioCtx.createMediaStreamSource(audioStream);
     source.connect(analyser);
-    
     analyser.fftSize = 64;
     const bufferLength = analyser.frequencyBinCount;
     const dataArray = new Uint8Array(bufferLength);
-    
     let animationFrameId;
-    
     const updateWaveform = () => {
       analyser.getByteFrequencyData(dataArray);
-      
       const newHeights = [];
       for (let i = 0; i < 12; i++) {
-        const val = dataArray[i * 2] || 0; // skip every other bin to spread out
-        const height = 8 + (val / 255) * 90; // scale from 8px to ~98px
+        const val = dataArray[i * 2] || 0;
+        const height = 8 + (val / 255) * 90;
         newHeights.push(height);
       }
       setVolumeData(newHeights);
-      
       animationFrameId = requestAnimationFrame(updateWaveform);
     };
-    
     updateWaveform();
-    
     return () => {
       cancelAnimationFrame(animationFrameId);
       audioCtx.close().catch(console.error);
@@ -429,150 +380,98 @@ function LiveRecordingScreen({ user, logout, sessionData, timeLeft, stopRecordin
   };
 
   return (
-    <div className="min-h-[100dvh] w-full flex flex-col lg:flex-row bg-surface">
-      {isMobileMenuOpen && (
-        <div className="lg:hidden fixed inset-0 bg-black/20 z-40" onClick={() => setIsMobileMenuOpen(false)} />
-      )}
-<aside className={`${isMobileMenuOpen ? 'flex absolute inset-y-0 left-0 z-50 shadow-2xl h-full' : 'hidden'} lg:flex w-[240px] border-r border-gray-200 flex-col bg-white shrink-0`} data-purpose="navigation-sidebar">
-<div className="p-6 border-b border-gray-100 flex items-center gap-2">
-<span className="font-bold text-lg tracking-tight">ImpromptuAI</span>
-{isMobileMenuOpen && (
-  <button onClick={() => setIsMobileMenuOpen(false)} className="ml-auto lg:hidden text-gray-500 hover:text-black">
-    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-  </button>
-)}
-</div>
-<nav className="flex-1 p-4 space-y-2">
-<div className="flex items-center gap-3 px-3 py-2 bg-gray-50 rounded-custom">
-<div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center text-xs font-semibold">{user?.name?.charAt(0).toUpperCase()}</div>
-<span className="text-sm font-medium">{user?.name}</span>
-</div>
+    <>
+      <header className="md:hidden fixed top-0 left-0 right-0 h-14 bg-white border-b border-[#ECECEC] flex items-center justify-between px-4 z-30">
+        <button onClick={() => setIsMobileMenuOpen(true)} className="p-2 rounded-xl text-[#666666] hover:bg-[#F5F5F4]" aria-label="Open menu">
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" /></svg>
+        </button>
+        <span className="text-[14px] font-semibold text-[#111111] tracking-tight">ImpromptuAI</span>
+        <div className="w-9" />
+      </header>
+      <Sidebar user={user} logout={logout} startNewSession={() => {}} isMobileOpen={isMobileMenuOpen} onMobileClose={() => setIsMobileMenuOpen(false)} />
+      <main className="md:pl-60 min-h-screen bg-[#FAFAF8] pt-14 md:pt-0 flex items-center justify-center px-6 py-12">
+        <div className="w-full max-w-2xl flex flex-col items-center gap-10">
 
-<div className="pt-4 pb-2">
-<Link to="/" className="w-full py-2.5 bg-black text-white rounded-custom text-sm font-bold flex items-center justify-center gap-2 transition-colors hover:bg-gray-900">
-<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" /></svg>
-New Session
-</Link>
-</div>
+          {/* Topic */}
+          <section className="text-center w-full">
+            <span className="text-[11px] font-bold text-rose-500 uppercase tracking-widest block mb-3">● Recording Active</span>
+            <h1 className="text-[36px] md:text-[44px] font-extrabold text-[#111111] leading-tight tracking-tight">
+              {sessionData?.topic}
+            </h1>
+          </section>
 
-<div className="space-y-1">
-<Link className="flex items-center gap-3 px-3 py-2 text-sm text-gray-500 hover:bg-gray-50 rounded-custom transition-colors" to="/">
-<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h7" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" /></svg>
-          Dashboard
-</Link>
-<Link className="flex items-center gap-3 px-3 py-2 text-sm text-gray-500 hover:bg-gray-50 rounded-custom transition-colors" to="/history">
-<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" /></svg>
-          Session History
-</Link>
-<Link className="flex items-center gap-3 px-3 py-2 text-sm text-gray-500 hover:bg-gray-50 rounded-custom transition-colors" to="/progress">
-<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" /></svg>
-          Progress
-</Link>
-</div>
-</nav>
-<div className="p-4 space-y-1 mt-auto">
-<Link className="flex items-center gap-3 px-3 py-2 text-sm text-gray-500 hover:bg-gray-50 rounded-custom transition-colors" to="/settings">
-<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" /></svg>
-        Settings
-</Link>
-<button onClick={logout} className="w-full flex items-center gap-3 px-3 py-2 text-sm text-gray-500 hover:bg-gray-50 rounded-custom transition-colors">
-<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" /></svg>
-        Logout
-</button>
-</div>
-</aside>
-<div className="flex-1 flex flex-col relative">
-<header className="h-16 px-4 md:px-8 flex items-center justify-between lg:justify-end border-b border-gray-100 bg-white shrink-0" data-purpose="main-header">
-<div className="flex items-center gap-3 lg:hidden">
-<button onClick={() => setIsMobileMenuOpen(true)} className="p-2 -ml-2 text-gray-600 hover:text-black">
-<svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" /></svg>
-</button>
-<div className="font-bold text-lg tracking-tight">ImpromptuAI</div>
-</div>
-<div className="flex items-center gap-4">
-<button className="text-gray-400 hover:text-black">
-<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" /></svg>
-</button>
-<div className="w-8 h-8 rounded-full bg-gray-200 border border-gray-300 flex items-center justify-center overflow-hidden">
-<span className="text-xs font-bold text-gray-600">{user?.name?.charAt(0).toUpperCase()}</span>
-</div>
-</div>
-</header>
-<div className="flex-1 overflow-y-auto p-4 md:pt-8 md:px-8 flex flex-col items-center relative bg-white">
-  <div className="w-full max-w-3xl flex flex-col items-center space-y-12 mt-2">
-    <section className="text-center w-full">
-      <span className="text-[10px] font-bold text-red-500 uppercase tracking-widest block mb-4">Recording Active</span>
-      <h2 className="text-3xl md:text-4xl font-extrabold max-w-2xl mx-auto leading-tight text-gray-900">
-        {sessionData?.topic}
-      </h2>
-    </section>
+          {/* Timer arc */}
+          <section className="flex flex-col items-center">
+            <div className="relative flex items-center justify-center h-32">
+              <svg className="w-48 h-24 overflow-visible">
+                <path className="text-red-100" d="M 16 96 A 80 80 0 0 1 176 96" fill="transparent" stroke="currentColor" strokeWidth="8" strokeLinecap="round" />
+                <path className="text-red-500 transition-all duration-1000 ease-linear" d="M 16 96 A 80 80 0 0 1 176 96" fill="transparent" stroke="currentColor" strokeDasharray="251.2" strokeDashoffset={251.2 - (timeLeft / 120) * 251.2} strokeWidth="8" strokeLinecap="round" />
+              </svg>
+              <div className="absolute top-14 text-center">
+                <span className="block text-[28px] font-extrabold tracking-tight text-red-500" style={{ fontVariantNumeric: 'tabular-nums' }}>{formatTime(timeLeft)}</span>
+                <span className="text-[10px] font-bold text-red-300 uppercase tracking-widest mt-1 block">Recording</span>
+              </div>
+            </div>
+          </section>
 
-    <section className="flex flex-col items-center justify-center w-full">
-      <div className="relative flex items-center justify-center h-32 mb-8">
-        <svg className="w-48 h-24 overflow-visible">
-          <path className="text-red-100" d="M 16 96 A 80 80 0 0 1 176 96" fill="transparent" stroke="currentColor" strokeWidth="8" strokeLinecap="round" />
-          <path className="text-red-600 transition-all duration-1000 ease-linear" d="M 16 96 A 80 80 0 0 1 176 96" fill="transparent" stroke="currentColor" strokeDasharray="251.2" strokeDashoffset={251.2 - (timeLeft / 120) * 251.2} strokeWidth="8" strokeLinecap="round" />
-        </svg>
-        <div className="absolute top-14 text-center w-full flex flex-col items-center">
-          <span className="block text-3xl font-extrabold tracking-tight text-red-600" style={{ fontVariantNumeric: 'tabular-nums' }}>{formatTime(timeLeft)}</span>
-          <span className="text-[10px] font-bold text-red-400 uppercase tracking-widest mt-2 block">Recording</span>
+          {/* Waveform */}
+          <section className="w-full max-w-xl">
+            <div className="bg-white border border-[#ECECEC] rounded-2xl p-6 flex items-center justify-center h-[120px] shadow-[0_2px_12px_rgba(0,0,0,0.04)]" id="waveform">
+              <div className="flex items-center justify-center gap-1.5 h-16 w-full overflow-hidden">
+                {volumeData.map((height, i) => (
+                  <div key={i} className="w-1 bg-[#111111] rounded-full transition-all duration-75" style={{ height: `${height}px` }} />
+                ))}
+              </div>
+            </div>
+          </section>
+
+          {/* Stop button */}
+          <section className="w-full max-w-xs">
+            <button
+              onClick={stopRecording}
+              className="w-full bg-rose-600 text-white py-3.5 rounded-xl text-[14px] font-bold tracking-widest hover:bg-rose-700 transition-colors flex items-center justify-center gap-2 shadow-[0_4px_20px_rgba(220,38,38,0.25)]"
+            >
+              <span className="w-2.5 h-2.5 bg-white rounded-sm" />
+              STOP RECORDING
+            </button>
+          </section>
         </div>
-      </div>
-      <div className="w-full bg-white border-2 border-gray-100 rounded-3xl p-6 md:p-8 flex flex-col items-center justify-center h-[150px] max-w-2xl" id="waveform">
-        <div className="flex items-center justify-center gap-1.5 h-20 w-full overflow-hidden">
-          {volumeData.map((height, i) => (
-            <div key={i} className="w-1 bg-black rounded-full transition-all duration-75" style={{ height: `${height}px` }}></div>
-          ))}
-        </div>
-      </div>
-    </section>
-
-    <section className="w-full max-w-xs mx-auto">
-      <button onClick={stopRecording} className="w-full bg-red-600 text-white py-4 rounded-full text-sm font-bold tracking-widest hover:bg-red-700 transition-transform hover:scale-105 active:scale-95 shadow-xl shadow-red-600/20 flex items-center justify-center gap-3">
-        <span className="w-2.5 h-2.5 bg-white rounded-full"></span>
-        STOP RECORDING
-      </button>
-    </section>
-  </div>
-</div>
-</div>
-    </div>
+      </main>
+    </>
   );
 }
-function SpeechAnalysisScreen({ user, sessionData }) {
+
+function SpeechAnalysisScreen({ user, logout, sessionData }) {
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   return (
-    <div className="h-screen w-full flex flex-col bg-surface overflow-hidden">
-<header className="h-16 border-b border-surface-dim bg-white flex items-center justify-between px-6 shrink-0">
-<div className="flex items-center gap-2">
-<span className="font-bold text-xl tracking-tight">ImpromptuAI</span>
-</div>
-<div className="flex items-center gap-4">
-<button className="p-2 text-gray-500 hover:bg-gray-100 rounded-full">
-<svg fill="none" height="20" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" width="20" xmlns="http://www.w3.org/2000/svg"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.73 21a2 2 0 0 1-3.46 0" /></svg>
-</button>
-<div className="w-8 h-8 rounded-full bg-gray-200 border border-gray-300 flex items-center justify-center overflow-hidden">
-<span className="text-xs font-bold text-gray-600">{user?.name?.charAt(0).toUpperCase()}</span>
-</div>
-</div>
-</header>
-<main className="flex-1 flex items-center justify-center bg-surface p-8">
-<div className="max-w-md w-full text-center space-y-8">
-<div className="w-24 h-24 mx-auto rounded-full bg-white shadow-sm flex items-center justify-center border border-gray-200 animate-pulse">
-<svg className="w-10 h-10 text-gray-900" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-  <path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" />
-</svg>
-</div>
-<div>
-<h1 className="text-2xl font-bold tracking-tight mb-2">Analyzing Speech</h1>
-<p className="text-gray-500 text-sm">Please wait while our AI models evaluate your performance for "{sessionData?.topic}".</p>
-</div>
-<div className="w-full bg-gray-200 rounded-full h-1.5 mb-4 overflow-hidden">
-  <div className="bg-black h-1.5 rounded-full w-full animate-[pulse_1s_ease-in-out_infinite]" style={{ transformOrigin: 'left' }}></div>
-</div>
-<p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Processing Audio</p>
-</div>
-</main>
-    </div>
+    <>
+      <header className="md:hidden fixed top-0 left-0 right-0 h-14 bg-white border-b border-[#ECECEC] flex items-center justify-between px-4 z-30">
+        <button onClick={() => setIsMobileMenuOpen(true)} className="p-2 rounded-xl text-[#666666] hover:bg-[#F5F5F4]" aria-label="Open menu">
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" /></svg>
+        </button>
+        <span className="text-[14px] font-semibold text-[#111111] tracking-tight">ImpromptuAI</span>
+        <div className="w-9" />
+      </header>
+      <Sidebar user={user} logout={logout} startNewSession={() => {}} isMobileOpen={isMobileMenuOpen} onMobileClose={() => setIsMobileMenuOpen(false)} />
+      <main className="md:pl-60 min-h-screen bg-[#FAFAF8] pt-14 md:pt-0 flex items-center justify-center p-8">
+        <div className="max-w-md w-full text-center">
+          <div className="w-20 h-20 mx-auto rounded-2xl bg-white border border-[#ECECEC] shadow-[0_2px_12px_rgba(0,0,0,0.04)] flex items-center justify-center mb-8 animate-pulse">
+            <svg className="w-9 h-9 text-[#16A34A]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+            </svg>
+          </div>
+          <h1 className="text-[28px] font-extrabold text-[#111111] tracking-tight mb-2">Analyzing Speech</h1>
+          <p className="text-[15px] text-[#666666] mb-8 leading-relaxed">
+            Please wait while our AI evaluates your performance for<br />
+            <span className="font-semibold text-[#111111]">"{sessionData?.topic}"</span>
+          </p>
+          <div className="w-full bg-[#F0F0F0] rounded-full h-1 mb-3 overflow-hidden">
+            <div className="bg-[#16A34A] h-1 rounded-full w-full animate-[pulse_1.2s_ease-in-out_infinite]" style={{ transformOrigin: 'left' }} />
+          </div>
+          <p className="text-[11px] font-bold text-[#AAAAAA] uppercase tracking-widest">Processing Audio</p>
+        </div>
+      </main>
+    </>
   );
 }
 
