@@ -36,7 +36,7 @@ export default function SessionFlow({ user, logout }) {
               setFlowState('report');
             } else {
               setFlowState('analyzing');
-              pollEvaluation();
+              listenForEvaluationSSE();
             }
           }
         }
@@ -121,7 +121,7 @@ export default function SessionFlow({ user, logout }) {
           });
           if (!confirmRes.ok) throw new Error('Failed to confirm upload');
 
-          pollEvaluation();
+          listenForEvaluationSSE();
         } catch (err) {
           console.error('Failed to upload audio', err);
         }
@@ -154,25 +154,30 @@ export default function SessionFlow({ user, logout }) {
     }
   };
 
-  const pollEvaluation = () => {
-    const pollInterval = setInterval(async () => {
+  const listenForEvaluationSSE = () => {
+    const eventSource = new EventSource(`${API_BASE}/sessions/${id}/events`, { withCredentials: true });
+
+    eventSource.onmessage = (event) => {
       try {
-        const res = await fetch(`${API_BASE}/sessions/${id}/evaluation`, { credentials: 'include' });
-        if (res.ok) {
-          const data = await res.json();
-          if (data && data.status === 'completed') {
-            clearInterval(pollInterval);
-            setEvaluationResult(data);
-            setFlowState('report');
-          } else if (data && data.status === 'failed') {
-            clearInterval(pollInterval);
-            setFlowState('error');
-          }
+        const data = JSON.parse(event.data);
+        if (data.status === 'completed') {
+          eventSource.close();
+          setEvaluationResult(data);
+          setFlowState('report');
+        } else if (data.status === 'failed') {
+          eventSource.close();
+          setFlowState('error');
         }
-      } catch (e) {
-        console.error(e);
+      } catch (err) {
+        console.error('SSE parse error:', err);
       }
-    }, 3000);
+    };
+
+    eventSource.onerror = (err) => {
+      console.error('SSE error:', err);
+      eventSource.close();
+      setFlowState('error');
+    };
   };
 
   if (!sessionData) return <div>Loading session...</div>;

@@ -34,7 +34,11 @@ export default function LoginPage({ setUser }) {
       const data = await res.json();
       if (res.ok && data.user) {
         setUser(data.user);
-        navigate('/');
+        if (data.user.role === 'admin') {
+          navigate('/admin');
+        } else {
+          navigate('/dashboard');
+        }
       } else {
         setAuthError(data.error || 'Login failed');
       }

@@ -84,7 +84,7 @@ const Navbar = () => {
           <motion.button
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
-            onClick={() => navigate('/login')}
+            onClick={() => navigate('/signup')}
             className="text-sm bg-[#111827] text-white font-medium px-4 py-2 rounded-lg hover:bg-[#000000] transition-colors duration-150"
             aria-label="Get started"
           >
@@ -133,7 +133,7 @@ const Navbar = () => {
               Login
             </button>
             <button
-              onClick={() => { setMobileOpen(false); navigate('/login'); }}
+              onClick={() => { setMobileOpen(false); navigate('/signup'); }}
               className="text-sm bg-[#111827] text-white font-medium px-4 py-2.5 rounded-lg w-full"
             >
               Get Started

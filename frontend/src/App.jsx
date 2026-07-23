@@ -12,6 +12,13 @@ import SettingsScreen from './pages/SettingsScreen';
 import MainLayout from './components/layout/MainLayout';
 import LandingPage from './pages/LandingPage';
 
+import AdminLayout from './components/layout/AdminLayout';
+import AdminDashboardScreen from './pages/admin/AdminDashboardScreen';
+import AdminUsersScreen from './pages/admin/AdminUsersScreen';
+import AdminUserDetailScreen from './pages/admin/AdminUserDetailScreen';
+import AdminSessionsScreen from './pages/admin/AdminSessionsScreen';
+import AdminSessionDetailScreen from './pages/admin/AdminSessionDetailScreen';
+
 const API_BASE = import.meta.env.VITE_API_BASE || (import.meta.env.PROD ? '/api' : 'http://localhost:4000/api');
 
 const App = () => {
@@ -49,26 +56,35 @@ const App = () => {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Public Landing Page */}
-        <Route path="/landing" element={<LandingPage />} />
+        {/* Public Landing Page as the Root */}
+        <Route path="/" element={<LandingPage />} />
 
         {/* Auth Routes */}
-        <Route path="/login" element={user ? <Navigate to="/" /> : <LoginPage setUser={setUser} />} />
-        <Route path="/signup" element={user ? <Navigate to="/" /> : <CreateAccountScreen setUser={setUser} />} />
+        <Route path="/login" element={user ? <Navigate to="/dashboard" /> : <LoginPage setUser={setUser} />} />
+        <Route path="/signup" element={user ? <Navigate to="/dashboard" /> : <CreateAccountScreen setUser={setUser} />} />
 
         {/* Unified Session Flow Component (Full Screen, No Sidebar) */}
         <Route path="/session/:id" element={user ? <SessionFlow user={user} logout={logout} /> : <Navigate to="/login" />} />
 
         {/* Protected Dashboard Routes with Shared Layout */}
-        <Route element={user ? <MainLayout user={user} logout={logout} /> : <Navigate to="/landing" />}>
-          <Route path="/" element={<DashboardScreen />} />
+        <Route element={user ? <MainLayout user={user} logout={logout} /> : <Navigate to="/" />}>
+          <Route path="/dashboard" element={<DashboardScreen />} />
           <Route path="/history" element={<SessionHistoryScreen />} />
           <Route path="/progress" element={<ProgressScreen />} />
           <Route path="/settings" element={<SettingsScreen />} />
         </Route>
 
+        {/* Admin Routes */}
+        <Route path="/admin" element={user && user.role === 'admin' ? <AdminLayout user={user} logout={logout} /> : <Navigate to="/" />}>
+          <Route index element={<AdminDashboardScreen />} />
+          <Route path="users" element={<AdminUsersScreen />} />
+          <Route path="users/:id" element={<AdminUserDetailScreen />} />
+          <Route path="sessions" element={<AdminSessionsScreen />} />
+          <Route path="sessions/:id" element={<AdminSessionDetailScreen />} />
+        </Route>
+
         {/* Fallback */}
-        <Route path="*" element={<Navigate to="/landing" />} />
+        <Route path="*" element={<Navigate to="/" />} />
       </Routes>
     </BrowserRouter>
   );

@@ -233,7 +233,7 @@ const Hero = () => {
               <motion.button
                 whileHover={{ scale: 1.02, backgroundColor: '#000000' }}
                 whileTap={{ scale: 0.98 }}
-                onClick={() => navigate('/login')}
+                onClick={() => navigate('/signup')}
                 className="flex items-center gap-2 bg-[#111827] text-white font-medium px-6 py-3 rounded-xl text-sm transition-colors duration-150"
                 aria-label="Start practicing — go to login"
               >

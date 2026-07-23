@@ -36,7 +36,7 @@ const CTA = () => {
           <motion.button
             whileHover={{ scale: 1.03, backgroundColor: '#EBEBEB' }}
             whileTap={{ scale: 0.98 }}
-            onClick={() => navigate('/login')}
+            onClick={() => navigate('/signup')}
             className="inline-flex items-center gap-2 bg-white text-[#0F172A] font-semibold px-8 py-4 rounded-xl text-sm transition-colors duration-150"
             aria-label="Get started for free"
           >
