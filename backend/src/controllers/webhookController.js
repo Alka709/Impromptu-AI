@@ -1,5 +1,6 @@
 const { db } = require('../db');
 const { userPrevRecord, metricesCalculated } = require('../db/schema/evaluation');
+const { sessions } = require('../db/schema/sessions');
 const { eq } = require('drizzle-orm');
 
 const { z } = require('zod');
@@ -7,6 +8,8 @@ const { z } = require('zod');
 const webhookSchema = z.object({
   userId: z.string({ required_error: 'Missing userId or sessionId' }).min(1, 'Missing userId or sessionId'),
   sessionId: z.string({ required_error: 'Missing userId or sessionId' }).min(1, 'Missing userId or sessionId'),
+  status: z.enum(['completed', 'failed']).optional(),
+  error: z.string().optional(),
   summary: z.string().optional(),
   strengths: z.array(z.string()).optional(),
   weaknesses: z.array(z.string()).optional(),
@@ -25,6 +28,8 @@ const handleEvaluationResult = async (req, res) => {
     const {
       userId,
       sessionId,
+      status,
+      error,
       summary,
       strengths,
       weaknesses,
@@ -32,6 +37,13 @@ const handleEvaluationResult = async (req, res) => {
       overallScore,
       metrics
     } = parsedBody.data;
+
+    if (status === 'failed') {
+      await db.update(sessions)
+        .set({ status: 'failed' })
+        .where(eq(sessions.id, sessionId));
+      return res.status(200).json({ message: 'Failure recorded successfully' });
+    }
 
     // Idempotency check — if this session's report already exists, treat this as a
     // duplicate delivery (e.g. a retried webhook call) and no-op rather than inserting again.
@@ -43,6 +55,11 @@ const handleEvaluationResult = async (req, res) => {
     if (existing.length > 0) {
       return res.status(200).json({ message: 'Already processed' });
     }
+
+    // Mark session as completed
+    await db.update(sessions)
+      .set({ status: 'completed' })
+      .where(eq(sessions.id, sessionId));
 
     // Save report
     await db.insert(userPrevRecord).values({

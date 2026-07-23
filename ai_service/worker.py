@@ -103,6 +103,20 @@ def process_evaluation_job(job_data: dict):
 
     except Exception as e:
         logger.error(f"Job failed for session {session_id}: {e}", exc_info=True, extra={"session_id": session_id})
+        try:
+            logger.info(f"Sending failure webhook to {callback_url}")
+            requests.post(
+                callback_url,
+                json={
+                    "userId": user_id,
+                    "sessionId": session_id,
+                    "status": "failed",
+                    "error": str(e)
+                },
+                headers={"X-Internal-Service-Key": os.environ.get("INTERNAL_SERVICE_KEY", "")}
+            )
+        except Exception as webhook_err:
+            logger.error(f"Failed to send failure webhook: {webhook_err}")
     finally:
         # Clean up temporary files
         if temp_path and os.path.exists(temp_path):

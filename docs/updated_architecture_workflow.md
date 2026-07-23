@@ -45,25 +45,26 @@ sequenceDiagram
 
     %% Step 2: Audio Recording & Upload
     User->>User: 8. Record Speech Audio (.webm)
-    User->>Express: 9. POST /api/sessions/:id/audio (Upload WebM)
-    Express->>S3: 10. PutObjectCommand (Store Audio)
-    S3-->>Express: 11. Audio Saved
-    Express->>Express: 12. Generate Pre-signed GET URL (10-min validity)
-    Express->>DB: 13. Update Session with audio_url
+    User->>Express: 9. GET /api/sessions/:id/upload-url
+    Express-->>User: 10. Return Pre-Signed PUT URL
+    User->>S3: 11. PUT Audio directly to S3
+    S3-->>User: 12. 200 OK (Audio Saved)
+    User->>Express: 13. POST /api/sessions/:id/confirm (Audio confirmed)
 
     %% Step 3: Asynchronous Delegation
-    Express->>FastAPI: 14. POST /api/evaluate/enqueue (Session ID, Presigned URL, Webhook Callback URL)
-    Express-->>User: 15. 200 OK ("Audio uploaded successfully")
+    Express->>DB: 14. Fetch user's recent evaluation history
+    Express->>Express: 15. Generate Pre-signed GET URL (10-min validity)
+    Express->>FastAPI: 16. POST /api/evaluate/enqueue (Session ID, Presigned URL, History Payload, Webhook Callback URL)
+    Express-->>User: 17. 200 OK ("Upload confirmed and evaluation enqueued")
 
     %% Step 4: Background AI Execution
     par Asynchronous Processing in FastAPI Worker
-        FastAPI->>S3: 16. Download Audio via Pre-signed URL
-        FastAPI->>FastAPI: 17. Convert WebM -> WAV (16kHz mono via FFmpeg)
-        FastAPI->>FastAPI: 18. Extract Speech Metrics (Librosa, Pitch, Pace, Fillers, Pauses)
-        FastAPI->>Express: 19. GET /api/users/:id/sessions/recent (Fetch History)
-        Express-->>FastAPI: 20. Return Recent Session Records
-        FastAPI->>Gemini: 21. Execute Multi-Agent Evaluation (Delivery, Content, Coach)
-        Gemini-->>FastAPI: 22. Return Evaluation Reports & Overall Score
+        FastAPI->>S3: 18. Download Audio via Pre-signed URL
+        FastAPI->>FastAPI: 19. Convert WebM -> WAV (16kHz mono via FFmpeg)
+        FastAPI->>FastAPI: 20. Fast Transcription via Groq Whisper API (whisper-large-v3-turbo)
+        FastAPI->>FastAPI: 21. Extract Speech Metrics (Librosa, Pitch, Pace, Fillers, Pauses)
+        FastAPI->>Gemini: 22. Execute Parallel Multi-Agent Evaluation (Delivery, Content, Coach)
+        Gemini-->>FastAPI: 23. Return Evaluation Reports & Overall Score
     end
 
     %% Step 5: Webhook Callback & Persistence

@@ -1,5 +1,6 @@
 const { S3Client, PutObjectCommand, GetObjectCommand } = require('@aws-sdk/client-s3');
 const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
+const { createPresignedPost } = require('@aws-sdk/s3-presigned-post');
 const { db } = require('../db');
 const { sessions } = require('../db/schema/sessions');
 const { userPrevRecord } = require('../db/schema/evaluation');
@@ -27,15 +28,20 @@ const generateUploadUrl = async (req, res) => {
 
     const fileKey = `audio/${userId}/${sessionId}-${Date.now()}.webm`;
 
-    const command = new PutObjectCommand({
+    const { url, fields } = await createPresignedPost(s3Client, {
       Bucket: process.env.AWS_S3_BUCKET_NAME,
       Key: fileKey,
-      ContentType: 'audio/webm',
+      Conditions: [
+        ['content-length-range', 0, 10485760], // 10MB max limit
+        ['starts-with', '$Content-Type', 'audio/']
+      ],
+      Fields: {
+        'Content-Type': 'audio/webm'
+      },
+      Expires: 300,
     });
 
-    const presignedPutUrl = await getSignedUrl(s3Client, command, { expiresIn: 300 });
-
-    return res.status(200).json({ uploadUrl: presignedPutUrl, fileKey: fileKey });
+    return res.status(200).json({ uploadUrl: url, fields: fields, fileKey: fileKey });
   } catch (error) {
     logger.error('Error generating upload URL', { error: error.message, stack: error.stack, session_id: req.params.id });
     return res.status(500).json({ error: 'Failed to generate upload URL' });
@@ -67,7 +73,7 @@ const confirmUpload = async (req, res) => {
     const presignedUrl = await getSignedUrl(s3Client, getCommand, { expiresIn: 900 });
 
     await db.update(sessions)
-      .set({ audio_url: audioUrl })
+      .set({ audio_url: audioUrl, status: 'processing' })
       .where(eq(sessions.id, sessionId));
 
     const pastSessions = await db.select()

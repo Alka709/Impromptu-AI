@@ -95,15 +95,18 @@ export default function SessionFlow({ user, logout }) {
             credentials: 'include'
           });
           if (!urlRes.ok) throw new Error('Failed to get upload URL');
-          const { uploadUrl, fileKey } = await urlRes.json();
+          const { uploadUrl, fields, fileKey } = await urlRes.json();
 
-          // 2. Upload directly to S3
+          // 2. Upload directly to S3 using FormData
+          const formData = new FormData();
+          Object.entries(fields).forEach(([key, value]) => {
+            formData.append(key, value);
+          });
+          formData.append('file', audioBlob);
+
           const s3Res = await fetch(uploadUrl, {
-            method: 'PUT',
-            body: audioBlob,
-            headers: {
-              'Content-Type': 'audio/webm'
-            }
+            method: 'POST',
+            body: formData
           });
           if (!s3Res.ok) throw new Error('Failed to upload to S3');
 
@@ -161,6 +164,9 @@ export default function SessionFlow({ user, logout }) {
             clearInterval(pollInterval);
             setEvaluationResult(data);
             setFlowState('report');
+          } else if (data && data.status === 'failed') {
+            clearInterval(pollInterval);
+            setFlowState('error');
           }
         }
       } catch (e) {
@@ -182,9 +188,44 @@ export default function SessionFlow({ user, logout }) {
       return <SpeechAnalysisScreen {...props} />;
     case 'report':
       return <PerformanceReportScreen {...props} />;
+    case 'error':
+      return <SpeechErrorScreen user={user} logout={logout} />;
     default:
       return <div>Invalid state</div>;
   }
+}
+
+function SpeechErrorScreen({ user }) {
+  return (
+    <div className="h-screen w-full flex flex-col bg-surface overflow-hidden">
+      <header className="h-16 border-b border-surface-dim bg-white flex items-center justify-between px-6 shrink-0">
+        <div className="flex items-center gap-2">
+          <span className="font-bold text-xl tracking-tight">ImpromptuAI</span>
+        </div>
+        <div className="flex items-center gap-4">
+          <div className="w-8 h-8 rounded-full bg-gray-200 border border-gray-300 flex items-center justify-center overflow-hidden">
+            <span className="text-xs font-bold text-gray-600">{user?.name?.charAt(0).toUpperCase()}</span>
+          </div>
+        </div>
+      </header>
+      <main className="flex-1 flex items-center justify-center bg-surface p-8">
+        <div className="max-w-md w-full text-center space-y-8">
+          <div className="w-24 h-24 mx-auto rounded-full bg-red-50 text-red-500 shadow-sm flex items-center justify-center border border-red-100">
+            <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight mb-2">Analysis Failed</h1>
+            <p className="text-gray-500 text-sm">Something went wrong while our AI was analyzing your speech. Please try again.</p>
+          </div>
+          <Link to="/" className="inline-block px-6 py-3 bg-black text-white rounded-full font-bold text-sm tracking-wide shadow hover:bg-gray-800 transition">
+            Return to Dashboard
+          </Link>
+        </div>
+      </main>
+    </div>
+  );
 }
 
 

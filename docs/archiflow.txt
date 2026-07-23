@@ -9,15 +9,14 @@ The Mypromptu platform operates on a polyglot microservices architecture, splitt
 Step-by-Step Flow:
 - **Authentication & Web Routing (Node.js/Express)**: When a user interacts with the React frontend, all standard web traffic hits the Node.js server. Node.js acts as the gateway. It handles JWT authentication, validates requests, and reads/writes to the PostgreSQL database using Drizzle ORM.
 - **Topic Generation (FastAPI - Synchronous)**: When the user requests a speech topic, Node.js forwards this request to the Python FastAPI microservice. Python securely queries the Google Gemini API, gets a topic, and returns it to Node.js, which then passes it to the frontend.
-- **Audio Hand-off (AWS S3)**: When a user finishes recording, the frontend uploads the raw audio to the Node.js backend. Instead of passing this massive file through memory to the Python service, Node.js securely uploads it to AWS S3. It then generates a "Pre-Signed GET URL" (a temporary, secure link valid for 15 minutes).
-- **Asynchronous Handoff (Redis & RQ)**: Node.js sends the Pre-Signed URL and the user's Session ID to FastAPI via an HTTP trigger (`/api/evaluate/enqueue`). FastAPI doesn't process the audio immediately. Instead, it places a "Job" into a Redis Queue. Node.js instantly returns a success response to the user so they aren't kept waiting.
+- **Audio Hand-off (AWS S3)**: When a user finishes recording, the frontend requests a "Pre-Signed PUT URL" from the Node.js backend and securely uploads the massive raw audio file *directly* to AWS S3, bypassing the Node.js memory entirely. The frontend then confirms the upload with Node.js, which generates a temporary "Pre-Signed GET URL" valid for 15 minutes.
+- **Asynchronous Handoff (Redis & RQ)**: Node.js sends the Pre-Signed URL, the user's Session ID, and their past evaluation history to FastAPI via an HTTP trigger (`/api/evaluate/enqueue`). FastAPI doesn't process the audio immediately. Instead, it places a "Job" into a Redis Queue. Node.js instantly returns a success response to the user so they aren't kept waiting.
 - **Background Worker Processing (Python RQ)**: A separate Python worker process constantly listens to the Redis queue. When it sees the job, it:
     1. Downloads the audio from S3 using the Pre-Signed URL.
-    2. Runs OpenAI Whisper for transcription.
+    2. Calls Groq's blazing-fast Whisper API for transcription (eliminating local OOM risks).
     3. Runs Librosa/Parselmouth for mathematical audio analysis (pitch, filler words, energy).
-    4. Fetches the user's historical context from the Node.js backend.
-    5. Sends all this data to Gemini 1.5 Pro to generate a highly structured JSON evaluation.
-- **Webhook Delivery**: Once the Python worker finishes the evaluation, it sends the final JSON report via an HTTP POST (Webhook) back to the Node.js server (`/api/webhooks/evaluation-result`). Node.js saves it in the PostgreSQL database, ready for the user to view.
+    4. Evaluates the speech in parallel using a Multi-Agent Evaluation Engine (Content Agent, Delivery Agent, Overall Coach) backed by Gemini, integrating the user's history directly from the job payload.
+- **Webhook Delivery (Tenacity)**: Once the Python worker finishes the evaluation, it sends the final JSON report via an HTTP POST (Webhook) back to the Node.js server (`/api/webhooks/evaluation-result`), wrapped in an exponential backoff retry loop using `tenacity` to ensure robust delivery. Node.js saves it in the PostgreSQL database, ready for the user to view.
 
 
 2. WHY DID WE EXPLICITLY CHOOSE THIS ARCHITECTURE?
