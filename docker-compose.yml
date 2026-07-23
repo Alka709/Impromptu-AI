@@ -1,4 +1,3 @@
-
 services:
   frontend:
     build:
@@ -22,12 +21,12 @@ services:
     volumes:
       - ./backend/src:/app/src
     environment:
-      - NODE_ENV=development
-      - PORT=4000
-      - AI_SERVICE_URL=http://ai-service:8000
-      - REDIS_URL=redis://redis:6379
-      - BACKEND_CALLBACK_URL=http://backend:4000
-      - OTLP_ENDPOINT=http://otel-collector:4318/v1/logs
+      - NODE_ENV=${NODE_ENV:-development}
+      - PORT=${PORT:-4000}
+      - AI_SERVICE_URL=${AI_SERVICE_URL:-http://ai-service:8000}
+      - REDIS_URL=${REDIS_URL:-redis://redis:6379}
+      - BACKEND_CALLBACK_URL=${BACKEND_CALLBACK_URL:-http://backend:4000}
+      - OTLP_ENDPOINT=${OTLP_ENDPOINT:-http://otel-collector:4318/v1/logs}
       # Database and S3 configurations should be passed via .env file or environment variables
     env_file:
       - ./backend/.env
@@ -46,10 +45,10 @@ services:
     volumes:
       - ./ai_service:/app
     environment:
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      - BACKEND_INTERNAL_URL=http://backend:4000
-      - OTLP_ENDPOINT=http://otel-collector:4318/v1/logs
+      - REDIS_HOST=
+      - REDIS_PORT=
+      - BACKEND_INTERNAL_URL=
+      - OTLP_ENDPOINT=
     env_file:
       - ./ai_service/.env
     networks:
@@ -66,104 +65,10 @@ services:
     volumes:
       - ./ai_service:/app
     environment:
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      - BACKEND_INTERNAL_URL=http://backend:4000
-      - OTLP_ENDPOINT=http://otel-collector:4318/v1/logs
-    env_file:
-      - ./ai_service/.env
-    networks:
-      - impromptu-network
-    depends_on:
-      - redis
-
-  redis:
-    image: redis:7-alpine
-    ports:
-      - "6380:6379"
-    volumes:
-      - redis_data:/data
-    networks:
-      - impromptu-network
-
-  otel-collector:
-    image: otel/opentelemetry-collector-contrib:0.100.0
-    command: ["--config=/etc/otel-collector-config.yaml"]
-    volumes:
-      - ./deploy/otel-collector-config.yaml:/etc/otel-collector-config.yaml
-    ports:
-      - "4319:4318" # OTLP HTTP receiver (4319 on host to avoid conflict)
-services:
-  frontend:
-    build:
-      context: ./frontend
-    ports:
-      - "5173:8080"
-    environment:
-      - VITE_API_BASE=http://localhost:4000/api
-    networks:
-      - impromptu-network
-    depends_on:
-      - backend
-
-  backend:
-    build:
-      context: ./backend
-      target: builder
-    command: npm run dev
-    ports:
-      - "4000:4000"
-    volumes:
-      - ./backend/src:/app/src
-    environment:
-      - NODE_ENV=development
-      - PORT=4000
-      - AI_SERVICE_URL=http://ai-service:8000
-      - REDIS_URL=redis://redis:6379
-      - BACKEND_CALLBACK_URL=http://backend:4000
-      - OTLP_ENDPOINT=http://otel-collector:4318/v1/logs
-      # Database and S3 configurations should be passed via .env file or environment variables
-    env_file:
-      - ./backend/.env
-    networks:
-      - impromptu-network
-    depends_on:
-      - ai-service
-      - redis
-
-  ai-service:
-    build:
-      context: ./ai_service
-    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
-    ports:
-      - "8000:8000"
-    volumes:
-      - ./ai_service:/app
-    environment:
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      - BACKEND_INTERNAL_URL=http://backend:4000
-      - OTLP_ENDPOINT=http://otel-collector:4318/v1/logs
-    env_file:
-      - ./ai_service/.env
-    networks:
-      - impromptu-network
-    depends_on:
-      - redis
-
-  ai-worker:
-    build:
-      context: ./ai_service
-    command: ["rq", "worker", "--worker-class", "rq.SimpleWorker", "-u", "redis://redis:6379"]
-    deploy:
-      replicas: 3
-    volumes:
-      - ./ai_service:/app
-    environment:
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      - BACKEND_INTERNAL_URL=http://backend:4000
-      - OTLP_ENDPOINT=http://otel-collector:4318/v1/logs
+      - REDIS_HOST=
+      - REDIS_PORT=
+      - BACKEND_INTERNAL_URL=
+      - OTLP_ENDPOINT=
     env_file:
       - ./ai_service/.env
     networks:
