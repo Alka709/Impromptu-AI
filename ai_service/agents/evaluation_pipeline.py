@@ -69,4 +69,6 @@ class EvaluationPipeline:
             history=aggregated["history"],
         )
 
+        final_report["relevanceScore"] = content_report.get("relevanceScore", 0.0)
+
         return final_report

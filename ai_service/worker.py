@@ -61,14 +61,30 @@ def process_evaluation_job(job_data: dict):
         logger.info(f"[Worker {WORKER_ID}] Extracting speech metrics from {wav_path}...", extra={"session_id": session_id, "worker_id": WORKER_ID})
         metrics = extract_all_metrics(wav_path)
         
-        # 3. Evaluate with Gemini
-        logger.info(f"[Worker {WORKER_ID}] Evaluating with Gemini", extra={"session_id": session_id, "metrics_count": len(metrics) if metrics else 0, "worker_id": WORKER_ID})
-        evaluation = pipeline.evaluate(
-            metrics=metrics,
-            topic=topic,
-            history=past_sessions,
-        )
-        logger.info(f"[Worker {WORKER_ID}] Gemini evaluation completed", extra={"session_id": session_id, "overallScore": evaluation.get('overallScore'), "worker_id": WORKER_ID})
+        transcript = metrics.get("transcript", "").strip()
+        wpm = metrics.get("wpm", 0)
+
+        if not transcript or wpm == 0:
+            logger.warning(f"[Worker {WORKER_ID}] Empty transcript detected. Audio has no speech.", extra={"session_id": session_id})
+            evaluation = {
+                "overallScore": 0.0,
+                "relevanceScore": 0.0,
+                "summary": "No speech detected in the audio recording. Please ensure your microphone is working and try again.",
+                "strengths": [],
+                "weaknesses": ["You did not speak during the recording."],
+                "improvementTips": ["Make sure your microphone is working and speak clearly on the given topic."]
+            }
+            metrics["relevanceScore"] = 0.0
+        else:
+            # 3. Evaluate with Gemini
+            logger.info(f"[Worker {WORKER_ID}] Evaluating with Gemini", extra={"session_id": session_id, "metrics_count": len(metrics) if metrics else 0, "worker_id": WORKER_ID})
+            evaluation = pipeline.evaluate(
+                metrics=metrics,
+                topic=topic,
+                history=past_sessions,
+            )
+            logger.info(f"[Worker {WORKER_ID}] Gemini evaluation completed", extra={"session_id": session_id, "overallScore": evaluation.get('overallScore'), "worker_id": WORKER_ID})
+            metrics["relevanceScore"] = float(evaluation.get("relevanceScore", 0.0))
         
         # 4. Send results back to Express
         def _ensure_list(val):

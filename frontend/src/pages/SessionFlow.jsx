@@ -229,7 +229,7 @@ function SpeechErrorScreen({ user, logout }) {
           </div>
           <h1 className="text-[28px] font-extrabold text-[#111111] tracking-tight mb-2">Analysis Failed</h1>
           <p className="text-[#666666] text-[15px] mb-8 leading-relaxed">Something went wrong while our AI was analyzing your speech. Please try again.</p>
-          <Link to="/" className="inline-flex items-center gap-2 px-6 py-2.5 bg-[#111111] text-white rounded-xl font-semibold text-[14px] hover:bg-black transition-colors">
+          <Link to="/dashboard" className="inline-flex items-center gap-2 px-6 py-2.5 bg-[#111111] text-white rounded-xl font-semibold text-[14px] hover:bg-black transition-colors">
             Return to Dashboard
           </Link>
         </div>

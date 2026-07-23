@@ -35,6 +35,7 @@ Be strict and provide a true, concise review.
 
 Return a JSON object with exactly these keys:
 - contentScore: float (0-10)
+- relevanceScore: float (0-10)
 - strengths: list of strings
 - weaknesses: list of strings
 - feedback: string

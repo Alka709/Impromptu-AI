@@ -28,6 +28,7 @@ class ContentAgent:
 
             return {
                 "contentScore": 0.0,
+                "relevanceScore": 0.0,
                 "strengths": [],
                 "weaknesses": [],
                 "feedback": "Content evaluation failed to parse.",

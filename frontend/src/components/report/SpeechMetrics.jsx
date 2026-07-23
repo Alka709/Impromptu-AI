@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Shield, Zap, Activity, Volume2, MessageSquare, PauseCircle } from 'lucide-react';
+import { Shield, Zap, Activity, Volume2, MessageSquare, PauseCircle, Target } from 'lucide-react';
 
 /* ── progress bar ── */
 function MiniBar({ value, max = 10, color: customColor }) {
@@ -65,13 +65,16 @@ export default function SpeechMetrics({ metrics, overallScore }) {
   const fillerCount = metrics?.filler_count ?? metrics?.filler_words_count ?? (metrics?.fillers ? Object.keys(metrics.fillers).length : 0);
   const pauseCount = metrics?.pause_count ?? metrics?.pauses_count ?? (Array.isArray(metrics?.pauses) ? metrics.pauses.length : 0);
 
+  const relevance = metrics?.relevanceScore != null ? Number(metrics.relevanceScore) : null;
+
   const items = [
     { icon: Activity,     label: 'Speech Rate',    value: wpm > 0 ? wpm : null, unit: 'WPM', max: 200, barColor: getWpmBarColor(wpm), delay: 0 },
     { icon: Shield,       label: 'Confidence',     value: articulation, unit: '/10', max: 10, barColor: getScoreBarColor(articulation), delay: 0.05 },
     { icon: Zap,          label: 'Fluency',        value: fluency, unit: '/10', max: 10, barColor: getScoreBarColor(fluency), delay: 0.1 },
     { icon: Volume2,      label: 'Pronunciation',  value: pronunciation, unit: '/10', max: 10, barColor: getScoreBarColor(pronunciation), delay: 0.15 },
-    { icon: MessageSquare,label: 'Filler Words',   value: fillerCount, unit: 'words', max: 15, barColor: fillerCount > 5 ? '#DC2626' : '#16A34A', delay: 0.2 },
-    { icon: PauseCircle,  label: 'Pauses',         value: pauseCount, unit: 'pauses', max: 15, barColor: pauseCount > 8 ? '#D97706' : '#16A34A', delay: 0.25 },
+    { icon: Target,       label: 'Relevance',      value: relevance, unit: '/10', max: 10, barColor: getScoreBarColor(relevance), delay: 0.2 },
+    { icon: MessageSquare,label: 'Filler Words',   value: fillerCount, unit: 'words', max: 15, barColor: fillerCount > 5 ? '#DC2626' : '#16A34A', delay: 0.25 },
+    { icon: PauseCircle,  label: 'Pauses',         value: pauseCount, unit: 'pauses', max: 15, barColor: pauseCount > 8 ? '#D97706' : '#16A34A', delay: 0.3 },
   ];
 
   return (
@@ -87,8 +90,8 @@ export default function SpeechMetrics({ metrics, overallScore }) {
         <span className="text-[11px] font-semibold text-[#16A34A] uppercase tracking-wider">Live AI Evaluation</span>
       </div>
 
-      {/* 6-column grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6">
+      {/* 7-column grid */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-7">
         {items.map((item) => (
           <MetricCell key={item.label} {...item} />
         ))}
