@@ -1,7 +1,0 @@
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: impromptu-ai
-  labels:
-    app.kubernetes.io/name: impromptu-ai
-    app.kubernetes.io/part-of: impromptu-ai

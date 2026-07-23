@@ -25,8 +25,7 @@ RUN useradd -m -u 1000 appuser && \
 USER appuser
 
 # Pre-download AI models into the image to ensure instant startup in production
-RUN python -c "from faster_whisper import WhisperModel; WhisperModel('base', device='cpu', compute_type='int8')" && \
-    python -c "import torch; torch.hub.load(repo_or_dir='snakers4/silero-vad', model='silero_vad', force_reload=False, trust_repo=True)"
+RUN python -c "import torch; torch.hub.load(repo_or_dir='snakers4/silero-vad', model='silero_vad', force_reload=False, trust_repo=True)"
 
 # Expose port
 EXPOSE 8000

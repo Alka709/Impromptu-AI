@@ -87,18 +87,40 @@ export default function SessionFlow({ user, logout }) {
         const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
         // Upload audio
         setFlowState('analyzing');
-        const formData = new FormData();
-        formData.append('audio', audioBlob, 'speech.webm');
         
         try {
-          await fetch(`${API_BASE}/sessions/${id}/audio`, {
+          // 1. Get Presigned URL
+          const urlRes = await fetch(`${API_BASE}/sessions/${id}/audio/url`, {
             method: 'POST',
-            body: formData,
             credentials: 'include'
           });
+          if (!urlRes.ok) throw new Error('Failed to get upload URL');
+          const { uploadUrl, fileKey } = await urlRes.json();
+
+          // 2. Upload directly to S3
+          const s3Res = await fetch(uploadUrl, {
+            method: 'PUT',
+            body: audioBlob,
+            headers: {
+              'Content-Type': 'audio/webm'
+            }
+          });
+          if (!s3Res.ok) throw new Error('Failed to upload to S3');
+
+          // 3. Confirm upload with backend
+          const confirmRes = await fetch(`${API_BASE}/sessions/${id}/audio/confirm`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ fileKey }),
+            credentials: 'include'
+          });
+          if (!confirmRes.ok) throw new Error('Failed to confirm upload');
+
           pollEvaluation();
         } catch (err) {
-          console.error('Failed to upload audio');
+          console.error('Failed to upload audio', err);
         }
       };
 

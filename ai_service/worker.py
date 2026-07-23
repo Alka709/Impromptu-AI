@@ -14,30 +14,6 @@ load_dotenv(override=True)
 
 pipeline = EvaluationPipeline()
 
-def fetch_past_sessions(user_id: str):
-    """Fetch past 3 session evaluations from Express API"""
-    try:
-        backend_url = os.environ.get("BACKEND_INTERNAL_URL")
-        if backend_url:
-            url = f"{backend_url}/api/users/{user_id}/sessions/recent"
-        else:
-            express_port = os.environ.get("EXPRESS_PORT", "4000")
-            url = f"http://localhost:{express_port}/api/users/{user_id}/sessions/recent"
-        logger.info(f"Fetching past sessions from {url}")
-        headers = {}
-        service_key = os.environ.get("INTERNAL_SERVICE_KEY")
-        if service_key:
-            headers["X-Internal-Service-Key"] = service_key
-        response = requests.get(url, headers=headers)
-        if response.status_code == 200:
-            data = response.json()
-            return data
-        logger.warning(f"Failed to fetch past sessions: {response.text}")
-        return []
-    except Exception as e:
-        logger.error(f"Error fetching past sessions: {e}")
-        return []
-
 def process_evaluation_job(job_data: dict):
     """Main RQ job handler for evaluating audio"""
     session_id = job_data.get('sessionId')
@@ -45,6 +21,7 @@ def process_evaluation_job(job_data: dict):
     topic = job_data.get("topic", "")
     audio_url = job_data.get('audioDownloadUrl')
     callback_url = job_data.get('reportCallbackUrl')
+    past_sessions = job_data.get('history', [])
 
     logger.info(f"Starting evaluation job for session {session_id}", extra={"session_id": session_id, "user_id": user_id})
 
@@ -82,11 +59,7 @@ def process_evaluation_job(job_data: dict):
         logger.info(f"Extracting speech metrics from {wav_path}...", extra={"session_id": session_id})
         metrics = extract_all_metrics(wav_path)
         
-        # 3. Fetch past sessions
-        logger.info(f"Fetching past sessions for user {user_id}", extra={"session_id": session_id, "user_id": user_id})
-        past_sessions = fetch_past_sessions(user_id)
-        
-        # 4. Evaluate with Gemini
+        # 3. Evaluate with Gemini
         logger.info(f"Evaluating with Gemini", extra={"session_id": session_id, "metrics_count": len(metrics) if metrics else 0})
         evaluation = pipeline.evaluate(
             metrics=metrics,
@@ -95,7 +68,7 @@ def process_evaluation_job(job_data: dict):
         )
         logger.info(f"Gemini evaluation completed", extra={"session_id": session_id, "overallScore": evaluation.get('overallScore')})
         
-        # 5. Send results back to Express
+        # 4. Send results back to Express
         payload = {
             "userId": user_id,
             "sessionId": session_id,
@@ -107,13 +80,24 @@ def process_evaluation_job(job_data: dict):
             "metrics": json.loads(json.dumps(metrics, cls=NumpyEncoder))
         }
         
-        logger.info(f"Sending results to webhook: {callback_url}")
-        webhook_res = requests.post(
-            callback_url,
-            json=payload,
-            headers={"X-Internal-Service-Key": os.environ["INTERNAL_SERVICE_KEY"]}
+        from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
+        
+        @retry(
+            stop=stop_after_attempt(5),
+            wait=wait_exponential(multiplier=2, min=2, max=60),
+            retry=retry_if_exception_type(requests.exceptions.RequestException),
+            reraise=True
         )
-        webhook_res.raise_for_status()
+        def deliver_webhook():
+            logger.info(f"Sending results to webhook: {callback_url} (attempt)")
+            webhook_res = requests.post(
+                callback_url,
+                json=payload,
+                headers={"X-Internal-Service-Key": os.environ.get("INTERNAL_SERVICE_KEY", "")}
+            )
+            webhook_res.raise_for_status()
+
+        deliver_webhook()
         
         logger.info(f"Job completed successfully for session {session_id}", extra={"session_id": session_id})
 
