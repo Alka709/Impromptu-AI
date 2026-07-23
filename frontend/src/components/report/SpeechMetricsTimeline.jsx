@@ -11,37 +11,42 @@ import {
   ReferenceLine,
 } from 'recharts';
 
+function formatTimeLabel(seconds) {
+  if (seconds <= 0) return '0:00';
+  const m = Math.floor(seconds / 60);
+  const s = Math.round(seconds % 60);
+  return `${m}:${s.toString().padStart(2, '0')}`;
+}
+
 /**
- * Construct speech timeline points from real audio/word data or deterministic scalar metrics.
+ * Construct speech timeline points dynamically scaling with speech duration (e.g., 2 mins = 120s).
  */
 function buildTimelineData(metrics, overallScore, durationSeconds) {
   const overall     = Number(overallScore) || 7.0;
   const fluency     = metrics?.fluency_score != null ? Number(metrics.fluency_score) : overall;
   const confidence  = metrics?.articulation_score != null ? Number(metrics.articulation_score) : overall;
-  const dur         = durationSeconds || metrics?.audio_duration || 120;
+  const dur         = Math.max(10, durationSeconds || metrics?.audio_duration || 120);
   
-  // If we have actual word-level timestamps or VAD speech segments from backend speech analysis
+  // Word timestamps or VAD speech segments
   const words = Array.isArray(metrics?.words) ? metrics.words : [];
   const segments = Array.isArray(metrics?.speech_segments) ? metrics.speech_segments : [];
   
-  const numSteps = 7;
+  // Dynamically calculate steps: ~7 to 10 points spanning 0s to dur (e.g. 120s)
+  const numSteps = Math.min(10, Math.max(6, Math.round(dur / 15)));
   const interval = dur / (numSteps - 1);
   const points = [];
 
   if (words.length > 5) {
-    // Compute actual WPM per interval from word timestamps
     for (let i = 0; i < numSteps; i++) {
       const segStart = i * interval;
       const segEnd = (i + 1) * interval;
       const wordsInSeg = words.filter(w => (w.start >= segStart && w.start < segEnd) || (w.end >= segStart && w.end < segEnd));
       const intervalWpm = (wordsInSeg.length / (interval / 60)) || 0;
-      // Convert WPM to a 0-10 score scale where 150 WPM = 9.0
       const score = Math.max(2.0, Math.min(10.0, 10.0 - Math.abs(150 - intervalWpm) / 18));
-      const label = i === 0 ? 'Start' : `${Math.round(segStart)}s`;
+      const label = formatTimeLabel(segStart);
       points.push({ label, your: parseFloat(score.toFixed(1)), avg: parseFloat(overall.toFixed(1)) });
     }
   } else if (segments.length > 0) {
-    // Compute actual speaking ratio per interval
     for (let i = 0; i < numSteps; i++) {
       const segStart = i * interval;
       const segEnd = (i + 1) * interval;
@@ -55,25 +60,24 @@ function buildTimelineData(metrics, overallScore, durationSeconds) {
       });
       const ratio = activeSecs / interval;
       const score = Math.max(3.0, Math.min(10.0, ratio * 10));
-      const label = i === 0 ? 'Start' : `${Math.round(segStart)}s`;
+      const label = formatTimeLabel(segStart);
       points.push({ label, your: parseFloat(score.toFixed(1)), avg: parseFloat(overall.toFixed(1)) });
     }
   } else {
-    // Deterministic curve using real start, mid, end dynamics from real scores (no Math.random)
+    // Deterministic curve scaling across speech duration
     const baseDiff = (fluency - confidence) * 0.2;
     for (let i = 0; i < numSteps; i++) {
       const t = i / (numSteps - 1);
-      // Smooth sinusoidal transition from start warm-up to mid-point to end confidence
-      const warmup = (1 - Math.cos(t * Math.PI)) * 0.5; // 0 to 1
+      const warmup = (1 - Math.cos(t * Math.PI)) * 0.5;
       const curve = Math.sin(t * Math.PI) * baseDiff;
       const yourScore = Math.max(1.0, Math.min(10.0, confidence + (overall - confidence) * warmup + curve));
-      const label = i === 0 ? 'Start' : `${Math.round((dur / (numSteps - 1)) * i)}s`;
+      const label = formatTimeLabel(t * dur);
       points.push({ label, your: parseFloat(yourScore.toFixed(1)), avg: parseFloat(overall.toFixed(1)) });
     }
   }
 
   const avg = parseFloat(overall.toFixed(1));
-  return { points, avg };
+  return { points, avg, dur };
 }
 
 /* ── Custom tooltip ── */
@@ -92,7 +96,7 @@ function ChartTooltip({ active, payload, label }) {
 }
 
 export default function SpeechMetricsTimeline({ metrics, overallScore, duration }) {
-  const { points, avg } = buildTimelineData(metrics, overallScore, duration);
+  const { points, avg, dur } = buildTimelineData(metrics, overallScore, duration);
 
   return (
     <motion.div
@@ -107,7 +111,7 @@ export default function SpeechMetricsTimeline({ metrics, overallScore, duration 
           Speech Performance Over Time
         </h2>
         <span className="text-[10px] font-semibold text-[#16A34A] uppercase tracking-wider">
-          Speech Timeline Analysis
+          {formatTimeLabel(dur)} Timeline Analysis
         </span>
       </div>
 
