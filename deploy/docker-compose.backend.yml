@@ -23,6 +23,7 @@ services:
 
   redis:
     image: redis:7-alpine
+    command: redis-server --protected-mode no
     ports:
       - "6379:6379" # Exposed so the AI EC2 instance can connect via Private IP
     volumes:
