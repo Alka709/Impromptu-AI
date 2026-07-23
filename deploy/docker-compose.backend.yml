@@ -28,8 +28,7 @@ services:
       - "6379:6379" # Exposed so the AI EC2 instance can connect via Private IP
     volumes:
       - redis_data:/data
-    volumes:
-      - loki_data:/tmp/loki
+
     networks:
       - backend-network
     restart: unless-stopped
