@@ -93,6 +93,100 @@ services:
       - ./deploy/otel-collector-config.yaml:/etc/otel-collector-config.yaml
     ports:
       - "4319:4318" # OTLP HTTP receiver (4319 on host to avoid conflict)
+services:
+  frontend:
+    build:
+      context: ./frontend
+    ports:
+      - "5173:8080"
+    environment:
+      - VITE_API_BASE=http://localhost:4000/api
+    networks:
+      - impromptu-network
+    depends_on:
+      - backend
+
+  backend:
+    build:
+      context: ./backend
+      target: builder
+    command: npm run dev
+    ports:
+      - "4000:4000"
+    volumes:
+      - ./backend/src:/app/src
+    environment:
+      - NODE_ENV=development
+      - PORT=4000
+      - AI_SERVICE_URL=http://ai-service:8000
+      - REDIS_URL=redis://redis:6379
+      - BACKEND_CALLBACK_URL=http://backend:4000
+      - OTLP_ENDPOINT=http://otel-collector:4318/v1/logs
+      # Database and S3 configurations should be passed via .env file or environment variables
+    env_file:
+      - ./backend/.env
+    networks:
+      - impromptu-network
+    depends_on:
+      - ai-service
+      - redis
+
+  ai-service:
+    build:
+      context: ./ai_service
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./ai_service:/app
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - BACKEND_INTERNAL_URL=http://backend:4000
+      - OTLP_ENDPOINT=http://otel-collector:4318/v1/logs
+    env_file:
+      - ./ai_service/.env
+    networks:
+      - impromptu-network
+    depends_on:
+      - redis
+
+  ai-worker:
+    build:
+      context: ./ai_service
+    command: ["rq", "worker", "--worker-class", "rq.SimpleWorker", "-u", "redis://redis:6379"]
+    deploy:
+      replicas: 3
+    volumes:
+      - ./ai_service:/app
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - BACKEND_INTERNAL_URL=http://backend:4000
+      - OTLP_ENDPOINT=http://otel-collector:4318/v1/logs
+    env_file:
+      - ./ai_service/.env
+    networks:
+      - impromptu-network
+    depends_on:
+      - redis
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6380:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - impromptu-network
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.100.0
+    command: ["--config=/etc/otel-collector-config.yaml"]
+    volumes:
+      - ./deploy/otel-collector-config.yaml:/etc/otel-collector-config.yaml
+    ports:
+      - "4319:4318" # OTLP HTTP receiver (4319 on host to avoid conflict)
       - "4320:4317" # OTLP gRPC receiver
     networks:
       - impromptu-network
@@ -104,6 +198,8 @@ services:
     ports:
       - "3100:3100"
     command: -config.file=/etc/loki/local-config.yaml
+    volumes:
+      - loki_data:/tmp/loki
     networks:
       - impromptu-network
 
@@ -113,6 +209,7 @@ services:
       - "3000:3000"
     volumes:
       - ./deploy/grafana/datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml
+      - grafana_data:/var/lib/grafana
     environment:
       - GF_AUTH_ANONYMOUS_ENABLED=true
       - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
@@ -127,3 +224,5 @@ networks:
 
 volumes:
   redis_data:
+  loki_data:
+  grafana_data:
