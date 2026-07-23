@@ -71,14 +71,17 @@ def process_evaluation_job(job_data: dict):
         logger.info(f"[Worker {WORKER_ID}] Gemini evaluation completed", extra={"session_id": session_id, "overallScore": evaluation.get('overallScore'), "worker_id": WORKER_ID})
         
         # 4. Send results back to Express
+        def _ensure_list(val):
+            return val if isinstance(val, list) else ([val] if val else [])
+            
         payload = {
             "userId": user_id,
             "sessionId": session_id,
-            "summary": evaluation.get("summary"),
-            "strengths": evaluation.get("strengths"),
-            "weaknesses": evaluation.get("weaknesses"),
-            "improvementTips": evaluation.get("improvementTips"),
-            "overallScore": evaluation.get("overallScore"),
+            "summary": str(evaluation.get("summary", "")),
+            "strengths": _ensure_list(evaluation.get("strengths")),
+            "weaknesses": _ensure_list(evaluation.get("weaknesses")),
+            "improvementTips": _ensure_list(evaluation.get("improvementTips")),
+            "overallScore": float(evaluation.get("overallScore", 0.0)),
             "metrics": json.loads(json.dumps(metrics, cls=NumpyEncoder))
         }
         

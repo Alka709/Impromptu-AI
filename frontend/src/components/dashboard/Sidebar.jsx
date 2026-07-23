@@ -17,14 +17,13 @@ export default function Sidebar({ user, logout, startNewSession, isMobileOpen, o
   const location = useLocation();
 
   const NAV_LINKS = [
-    { name: 'Home',            path: '/',         Icon: Home },
+    { name: 'Home',            path: '/dashboard',         Icon: Home },
     { name: 'Sessions',        path: '#new-session', Icon: Mic, isAction: true },
     { name: 'Session History',  path: '/history',  Icon: Clock },
     { name: 'Progress',        path: '/progress', Icon: BarChart2 },
   ];
 
   const BOTTOM_LINKS = [
-    { name: 'Settings', path: '/settings', Icon: Settings },
     { name: 'Profile',  path: '/settings', Icon: User },
   ];
 
