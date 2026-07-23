@@ -113,6 +113,12 @@ const login = async (req, res) => {
 
     const user = foundUsers[0];
 
+    // Google-OAuth users have no password — reject silently with a generic message
+    if (!user.password_hash) {
+      logger.warn('Login failed: account has no password (Google-only account)', { email });
+      return res.status(401).json({ error: 'Invalid email or password' });
+    }
+
     const isMatch = await bcrypt.compare(password, user.password_hash);
     if (!isMatch) {
       logger.warn('Login failed: Invalid password', { email });
