@@ -5,12 +5,11 @@ import { Shield, Zap, Activity, Volume2, MessageSquare, PauseCircle } from 'luci
 /* ── progress bar ── */
 function MiniBar({ value, max = 10, color: customColor }) {
   const pct = Math.min(100, Math.max(0, ((value || 0) / max) * 100));
-  const color = customColor || (pct >= 80 ? '#16A34A' : pct >= 50 ? '#D97706' : '#DC2626');
   return (
     <div className="w-full h-1 bg-[#F0F0F0] rounded-full mt-2.5 overflow-hidden">
       <div
         className="h-full rounded-full transition-all duration-700"
-        style={{ width: `${pct}%`, backgroundColor: color }}
+        style={{ width: `${pct}%`, backgroundColor: customColor || '#16A34A' }}
       />
     </div>
   );
@@ -44,6 +43,19 @@ function MetricCell({ icon: Icon, label, value, unit = '/10', max = 10, barColor
   );
 }
 
+/* ── Color Logic ── */
+function getScoreBarColor(val) {
+  if (val == null) return '#16A34A';
+  return val >= 7.0 ? '#16A34A' : val >= 5.0 ? '#D97706' : '#DC2626';
+}
+
+function getWpmBarColor(wpm) {
+  if (wpm == null || wpm === 0) return '#16A34A';
+  if (wpm >= 130) return '#16A34A'; // 130+ is green
+  if (wpm >= 100) return '#D97706'; // 100-129 is amber
+  return '#DC2626';                // under 100 is red
+}
+
 export default function SpeechMetrics({ metrics, overallScore }) {
   const wpm = Number(metrics?.wpm) || 0;
   const articulation = metrics?.articulation_score != null ? Number(metrics.articulation_score) : (overallScore != null ? Number(overallScore) : null);
@@ -54,10 +66,10 @@ export default function SpeechMetrics({ metrics, overallScore }) {
   const pauseCount = metrics?.pause_count ?? metrics?.pauses_count ?? (Array.isArray(metrics?.pauses) ? metrics.pauses.length : 0);
 
   const items = [
-    { icon: Activity,     label: 'Speech Rate',    value: wpm > 0 ? wpm : null, unit: 'WPM', max: 200, delay: 0 },
-    { icon: Shield,       label: 'Confidence',     value: articulation, unit: '/10', max: 10, delay: 0.05 },
-    { icon: Zap,          label: 'Fluency',        value: fluency, unit: '/10', max: 10, delay: 0.1 },
-    { icon: Volume2,      label: 'Pronunciation',  value: pronunciation, unit: '/10', max: 10, delay: 0.15 },
+    { icon: Activity,     label: 'Speech Rate',    value: wpm > 0 ? wpm : null, unit: 'WPM', max: 200, barColor: getWpmBarColor(wpm), delay: 0 },
+    { icon: Shield,       label: 'Confidence',     value: articulation, unit: '/10', max: 10, barColor: getScoreBarColor(articulation), delay: 0.05 },
+    { icon: Zap,          label: 'Fluency',        value: fluency, unit: '/10', max: 10, barColor: getScoreBarColor(fluency), delay: 0.1 },
+    { icon: Volume2,      label: 'Pronunciation',  value: pronunciation, unit: '/10', max: 10, barColor: getScoreBarColor(pronunciation), delay: 0.15 },
     { icon: MessageSquare,label: 'Filler Words',   value: fillerCount, unit: 'words', max: 15, barColor: fillerCount > 5 ? '#DC2626' : '#16A34A', delay: 0.2 },
     { icon: PauseCircle,  label: 'Pauses',         value: pauseCount, unit: 'pauses', max: 15, barColor: pauseCount > 8 ? '#D97706' : '#16A34A', delay: 0.25 },
   ];
@@ -72,7 +84,7 @@ export default function SpeechMetrics({ metrics, overallScore }) {
       {/* Section title */}
       <div className="px-7 py-5 border-b border-[#F0F0F0] flex items-center justify-between">
         <h2 className="text-[15px] font-bold text-[#111111] tracking-tight">Speech Metrics</h2>
-        <span className="text-[11px] font-semibold text-[#888888] uppercase tracking-wider">Live AI Analysis</span>
+        <span className="text-[11px] font-semibold text-[#16A34A] uppercase tracking-wider">Live AI Evaluation</span>
       </div>
 
       {/* 6-column grid */}
