@@ -28,6 +28,8 @@ services:
       - "6379:6379" # Exposed so the AI EC2 instance can connect via Private IP
     volumes:
       - redis_data:/data
+    volumes:
+      - loki_data:/tmp/loki
     networks:
       - backend-network
     restart: unless-stopped
@@ -51,6 +53,8 @@ services:
     ports:
       - "3100:3100"
     command: -config.file=/etc/loki/local-config.yaml
+    volumes:
+      - loki_data:/tmp/loki
     networks:
       - backend-network
     restart: unless-stopped
@@ -61,6 +65,7 @@ services:
       - "3000:3000"
     volumes:
       - ./grafana/datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml
+      - grafana_data:/var/lib/grafana
     environment:
       - GF_AUTH_ANONYMOUS_ENABLED=true
       - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
@@ -76,3 +81,5 @@ networks:
 
 volumes:
   redis_data:
+  loki_data:
+  grafana_data:
