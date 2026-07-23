@@ -1,221 +1,320 @@
-import React, { useState, useEffect } from 'react';
-import { useOutletContext, Link } from 'react-router-dom';
-import { 
-  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer,
-  Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
-  PieChart, Pie, Cell, Legend
-} from 'recharts';
+import React, { useState, useEffect, useMemo } from 'react';
+import { useOutletContext } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import { ArrowRight, TrendingUp } from 'lucide-react';
 
-const API_BASE = import.meta.env.VITE_API_BASE || (import.meta.env.PROD ? '/api' : 'http://localhost:4000/api');
+import ProgressSnapshot from '../components/progress/ProgressSnapshot';
+import ScoreTrendChart from '../components/progress/ScoreTrendChart';
+import TopicsChart from '../components/progress/TopicsChart';
+import SkillRadar from '../components/progress/SkillRadar';
+import PracticeActivity from '../components/progress/PracticeActivity';
 
+/* ─────────────────────────────────────────────
+   Constants
+───────────────────────────────────────────── */
+const API_BASE =
+  import.meta.env.VITE_API_BASE ||
+  (import.meta.env.PROD ? '/api' : 'http://localhost:4000/api');
+
+/* ─────────────────────────────────────────────
+   Data derivation helpers (pure, no side-effects)
+───────────────────────────────────────────── */
+
+/** Build the weekly activity buckets trailing up to the current week */
+function computeWeeklyActivity(history) {
+  if (!history) return [];
+
+  // Determine current week's Sunday start (00:00:00)
+  const now = new Date();
+  const currentWeekStart = new Date(now);
+  currentWeekStart.setHours(0, 0, 0, 0);
+  const day = currentWeekStart.getDay(); // 0 = Sunday
+  currentWeekStart.setDate(currentWeekStart.getDate() - day);
+
+  // Find earliest session date if history exists
+  let numWeeks = 8; // Default 8 trailing weeks
+  if (history.length > 0) {
+    const sorted = [...history].sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+    const earliestDate = new Date(sorted[0].created_at);
+    earliestDate.setHours(0, 0, 0, 0);
+    const earliestDay = earliestDate.getDay();
+    const earliestWeekStart = new Date(earliestDate);
+    earliestWeekStart.setDate(earliestWeekStart.getDate() - earliestDay);
+
+    const diffTime = currentWeekStart.getTime() - earliestWeekStart.getTime();
+    const diffWeeks = Math.floor(diffTime / (1000 * 60 * 60 * 24 * 7));
+    numWeeks = Math.max(8, Math.min(diffWeeks + 1, 12));
+  }
+
+  // Generate week buckets ending at current week
+  const weeks = [];
+  for (let i = numWeeks - 1; i >= 0; i--) {
+    const wStart = new Date(currentWeekStart);
+    wStart.setDate(wStart.getDate() - i * 7);
+
+    const wEnd = new Date(wStart);
+    wEnd.setDate(wEnd.getDate() + 6);
+    wEnd.setHours(23, 59, 59, 999);
+
+    const count = history.filter(s => {
+      if (!s.created_at) return false;
+      const d = new Date(s.created_at);
+      return d >= wStart && d <= wEnd;
+    }).length;
+
+    const label = wStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
+    weeks.push({
+      week: label,
+      sessions: count,
+      range: `${label} - ${wEnd.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`,
+    });
+  }
+
+  return weeks;
+}
+
+/** Build score trend chart data from sorted-ascending history */
+function computeScoreTrend(sortedHistory) {
+  return sortedHistory.map((s, i) => ({
+    date: new Date(s.created_at).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+    }),
+    score: parseFloat(Number(s.overall_score).toFixed(1)),
+    index: i + 1,
+  }));
+}
+
+/** Compute topics donut data */
+function computeTopicsData(history) {
+  const map = {};
+  history.forEach(s => {
+    const cat = s.category || 'Unknown';
+    if (!map[cat]) map[cat] = { count: 0, scoreSum: 0, hasScore: false };
+    map[cat].count += 1;
+    if (s.overall_score != null) {
+      map[cat].scoreSum += Number(s.overall_score);
+      map[cat].hasScore = true;
+    }
+  });
+
+  return Object.entries(map)
+    .map(([name, d]) => ({
+      name,
+      value: d.count,
+      avgScore: d.hasScore ? parseFloat((d.scoreSum / d.count).toFixed(1)) : null,
+    }))
+    .sort((a, b) => b.value - a.value);
+}
+
+/** Compute radar data from session metrics */
+function computeRadarData(history) {
+  let fluency = 0, confidence = 0, pacing = 0, content = 0, pronunciation = 0, n = 0;
+
+  history.forEach(s => {
+    if (!s.metrics) return;
+    fluency      += (s.metrics.fluency_score       ?? 0);
+    confidence   += (s.metrics.articulation_score  ?? 0);
+    pronunciation+= (s.metrics.pronunciation_score ?? s.metrics.articulation_score ?? 0);
+    content      += (s.overall_score               ?? 0);
+
+    const wpm = s.metrics.wpm || 0;
+    const pacingScore = Math.min(10, Math.max(0, 10 - Math.abs(150 - wpm) / 15));
+    pacing += pacingScore;
+    n++;
+  });
+
+  if (n === 0) {
+    return [
+      { subject: 'Fluency',       score: 0 },
+      { subject: 'Confidence',    score: 0 },
+      { subject: 'Pacing',        score: 0 },
+      { subject: 'Content',       score: 0 },
+      { subject: 'Pronunciation', score: 0 },
+    ];
+  }
+
+  return [
+    { subject: 'Fluency',       score: parseFloat((fluency / n).toFixed(1)) },
+    { subject: 'Confidence',    score: parseFloat((confidence / n).toFixed(1)) },
+    { subject: 'Pacing',        score: parseFloat((pacing / n).toFixed(1)) },
+    { subject: 'Content',       score: parseFloat((content / n).toFixed(1)) },
+    { subject: 'Pronunciation', score: parseFloat((pronunciation / n).toFixed(1)) },
+  ];
+}
+
+/* ─────────────────────────────────────────────
+   Skeleton
+───────────────────────────────────────────── */
+function SkeletonCard({ h = 'h-64' }) {
+  return (
+    <div className={`bg-white border border-[#ECECEC] rounded-md ${h} animate-pulse`} />
+  );
+}
+
+/* ─────────────────────────────────────────────
+   Empty State
+───────────────────────────────────────────── */
+function EmptyState({ startNewSession }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4 }}
+      className="flex flex-col items-center justify-center min-h-[60vh] text-center"
+    >
+      <div className="w-16 h-16 rounded-md bg-[#EAF5ED] flex items-center justify-center mb-5">
+        <TrendingUp size={28} className="text-[#16A34A]" strokeWidth={1.8} />
+      </div>
+      <h2 className="text-xl font-bold text-[#111111] mb-2">No progress yet</h2>
+      <p className="text-sm text-[#888888] mb-7 max-w-xs leading-relaxed">
+        Complete your first session to start tracking your communication growth.
+      </p>
+      <button
+        onClick={startNewSession}
+        className="inline-flex items-center gap-2 bg-[#111111] text-white text-sm font-semibold px-5 py-2.5 rounded-md hover:bg-black transition-colors"
+      >
+        Start Practicing
+        <ArrowRight size={14} />
+      </button>
+    </motion.div>
+  );
+}
+
+/* ─────────────────────────────────────────────
+   Main Page
+───────────────────────────────────────────── */
 export default function ProgressScreen() {
-  const { user } = useOutletContext();
+  const { user, startNewSession } = useOutletContext();
   const [history, setHistory] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
+  /* Fetch all history */
   useEffect(() => {
-    if (user?.id) {
-      fetch(`${API_BASE}/users/${user.id}/history`, { credentials: 'include' })
-        .then(res => res.json())
-        .then(data => {
-          if (Array.isArray(data)) {
-            setHistory(data.sort((a, b) => new Date(a.created_at) - new Date(b.created_at)));
-          }
-          setIsLoading(false);
-        })
-        .catch(err => {
-          console.error("Failed to fetch history:", err);
-          setIsLoading(false);
-        });
-    }
-  }, [user]);
+    if (!user?.id) return;
+    fetch(`${API_BASE}/users/${user.id}/history`, { credentials: 'include' })
+      .then(res => (res.ok ? res.json() : []))
+      .then(data => {
+        if (Array.isArray(data)) {
+          setHistory(data.sort((a, b) => new Date(a.created_at) - new Date(b.created_at)));
+        }
+        setIsLoading(false);
+      })
+      .catch(err => {
+        console.error('Progress history fetch error:', err);
+        setIsLoading(false);
+      });
+  }, [user?.id]);
 
-  if (isLoading) {
-    return <div className="flex items-center justify-center h-full p-12 text-gray-500 font-medium">Loading your progress...</div>;
-  }
-
-  if (history.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center p-12 text-center h-[70vh]">
-        <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-6">
-          <svg className="w-10 h-10 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>
-        </div>
-        <h2 className="text-2xl font-bold text-gray-800 mb-2">No Progress Yet</h2>
-        <p className="text-gray-500 max-w-md mb-8">You haven't completed any impromptu speeches yet. Start practicing to unlock your progress dashboard!</p>
-        <Link to="/" className="px-6 py-3 bg-black text-white font-bold rounded-full hover:bg-gray-800 transition-colors">Start Practicing</Link>
-      </div>
-    );
-  }
-
-  // Derived metrics
+  /* ── Derived data (memoised) ── */
   const totalSessions = history.length;
-  const sessionsThisMonth = history.filter(s => {
-    const d = new Date(s.created_at);
+
+  const sessionsThisMonth = useMemo(() => {
     const now = new Date();
-    return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
-  }).length;
+    return history.filter(s => {
+      const d = new Date(s.created_at);
+      return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+    }).length;
+  }, [history]);
 
-  let scoreImprovement = 0;
-  if (totalSessions > 1) {
+  const avgScore = useMemo(() => {
+    if (!totalSessions) return null;
+    const avg = history.reduce((acc, s) => acc + Number(s.overall_score), 0) / totalSessions;
+    return avg.toFixed(1);
+  }, [history, totalSessions]);
+
+  const scoreTrend = useMemo(() => {
+    if (totalSessions < 2) return null;
     const half = Math.floor(totalSessions / 2);
-    const firstHalf = history.slice(0, half);
-    const secondHalf = history.slice(half);
-    const avgFirst = firstHalf.reduce((acc, curr) => acc + curr.overall_score, 0) / firstHalf.length;
-    const avgSecond = secondHalf.reduce((acc, curr) => acc + curr.overall_score, 0) / secondHalf.length;
-    scoreImprovement = ((avgSecond - avgFirst) / avgFirst) * 100;
-  }
-  
-  const formattedImprovement = scoreImprovement > 0 ? `+${scoreImprovement.toFixed(0)}%` : `${scoreImprovement.toFixed(0)}%`;
-  const improvementColor = scoreImprovement > 0 ? 'text-green-500' : (scoreImprovement < 0 ? 'text-red-500' : 'text-gray-500');
+    const first = history.slice(0, half);
+    const second = history.slice(half);
+    const avgFirst = first.reduce((a, s) => a + Number(s.overall_score), 0) / first.length;
+    const avgSecond = second.reduce((a, s) => a + Number(s.overall_score), 0) / second.length;
+    return (((avgSecond - avgFirst) / avgFirst) * 100).toFixed(0);
+  }, [history, totalSessions]);
 
-  const avgOverallScore = totalSessions > 0 
-    ? (history.reduce((acc, curr) => acc + curr.overall_score, 0) / totalSessions).toFixed(1) 
-    : 0;
+  const { bestScore, bestScoreDate } = useMemo(() => {
+    if (!totalSessions) return { bestScore: null, bestScoreDate: null };
+    const best = history.reduce((acc, s) =>
+      Number(s.overall_score) > Number(acc.overall_score) ? s : acc
+    , history[0]);
+    return {
+      bestScore: Number(best.overall_score).toFixed(1),
+      bestScoreDate: new Date(best.created_at).toLocaleDateString('en-US', {
+        month: 'short', day: 'numeric', year: 'numeric',
+      }),
+    };
+  }, [history, totalSessions]);
 
-  // Area Chart Data (Overall Score Over Time)
-  const areaChartData = history.map((s, index) => ({
-    name: `S${index + 1}`,
-    date: new Date(s.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
-    score: s.overall_score
-  }));
+  const scoreTrendData = useMemo(() => computeScoreTrend(history), [history]);
+  const topicsData     = useMemo(() => computeTopicsData(history),  [history]);
+  const radarData      = useMemo(() => computeRadarData(history),   [history]);
+  const activityData   = useMemo(() => computeWeeklyActivity(history), [history]);
 
-  // Radar Chart Data (Average Skills)
-  let avgFluency = 0, avgConfidence = 0, avgPacing = 0;
-  let sessionsWithMetrics = 0;
-  
-  history.forEach(s => {
-    if (s.metrics) {
-      avgFluency += (s.metrics.fluency_score || 0);
-      avgConfidence += (s.metrics.articulation_score || 0);
-      const wpm = s.metrics.wpm || 0;
-      const pacing = Math.max(0, 10 - (Math.abs(150 - wpm) / 15));
-      avgPacing += pacing;
-      sessionsWithMetrics++;
-    }
-  });
-
-  if (sessionsWithMetrics > 0) {
-    avgFluency /= sessionsWithMetrics;
-    avgConfidence /= sessionsWithMetrics;
-    avgPacing /= sessionsWithMetrics;
-  }
-
-  const radarData = [
-    { subject: 'Fluency', score: parseFloat(avgFluency.toFixed(1)) },
-    { subject: 'Confidence', score: parseFloat(avgConfidence.toFixed(1)) },
-    { subject: 'Content', score: parseFloat(avgOverallScore) },
-    { subject: 'Pacing', score: parseFloat(avgPacing.toFixed(1)) },
-  ];
-
-  // Pie Chart Data (Category Distribution)
-  const categoryCounts = {};
-  history.forEach(s => {
-    const cat = s.category || 'Unknown';
-    categoryCounts[cat] = (categoryCounts[cat] || 0) + 1;
-  });
-  
-  const pieData = Object.keys(categoryCounts).map(key => ({
-    name: key,
-    value: categoryCounts[key]
-  }));
-  const pieColors = ['#10b981', '#3b82f6', '#f59e0b', '#8b5cf6', '#ec4899', '#64748b'];
-
+  /* ── Render ── */
   return (
-    <div className="p-4 md:p-8 pb-24">
-      {/*  Page Title  */}
-      <section className="mb-8">
-        <h2 className="text-3xl font-extrabold text-impromptu-black">Your Progress</h2>
-        <p className="text-gray-500 mt-1">Track how your speaking skills are improving over time.</p>
-      </section>
+    <div className="min-h-screen bg-[#FAFAF8] px-6 md:px-12 lg:px-16 py-10 max-w-[1600px] mx-auto w-full">
 
-      <section className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8" data-purpose="metrics-summary">
-        <div className="bg-white p-6 rounded-2xl border border-impromptu-border shadow-sm">
-          <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Sessions This Month</p>
-          <p className="text-3xl font-extrabold text-impromptu-black">{sessionsThisMonth}</p>
-        </div>
-        <div className="bg-white p-6 rounded-2xl border border-impromptu-border shadow-sm">
-          <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Average Score</p>
-          <p className="text-3xl font-extrabold text-impromptu-black">{avgOverallScore}/10</p>
-        </div>
-        <div className="bg-white p-6 rounded-2xl border border-impromptu-border shadow-sm">
-          <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Score Trend (Recent vs Past)</p>
-          <div className="flex items-center gap-2">
-            <span className={`text-3xl font-extrabold ${improvementColor}`}>{formattedImprovement}</span>
+      {/* ── Page Header ── */}
+      <motion.div
+        initial={{ opacity: 0, y: -8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+        className="mb-8"
+      >
+        <h1 className="text-3xl font-bold text-[#111111] tracking-tight">Your Progress</h1>
+        <p className="text-sm text-[#666666] mt-1.5">Track your communication growth over time.</p>
+      </motion.div>
+
+      {/* ── Loading ── */}
+      {isLoading && (
+        <div className="flex flex-col gap-8 animate-pulse">
+          <SkeletonCard h="h-20" />
+          <SkeletonCard h="h-80" />
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <SkeletonCard h="h-80" />
+            <SkeletonCard h="h-80" />
+          </div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <SkeletonCard h="h-80" />
+            <SkeletonCard h="h-80" />
           </div>
         </div>
-      </section>
+      )}
 
-      <section className="bg-white p-4 sm:p-8 rounded-2xl border border-impromptu-border shadow-sm mb-8" data-purpose="main-chart">
-        <h3 className="text-lg font-bold text-impromptu-black mb-6">Overall Score Over Time</h3>
-        <div className="h-72 w-full">
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={areaChartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
-              <defs>
-                <linearGradient id="colorScore" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
-                  <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
-              <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: '#9ca3af', fontSize: 14 }} dy={10} />
-              <YAxis domain={[0, 10]} axisLine={false} tickLine={false} tick={{ fill: '#9ca3af', fontSize: 14 }} />
-              <RechartsTooltip 
-                contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}
-              />
-              <Area type="monotone" dataKey="score" stroke="#10b981" fillOpacity={1} fill="url(#colorScore)" strokeWidth={3} activeDot={{ r: 6 }} />
-            </AreaChart>
-          </ResponsiveContainer>
-        </div>
-      </section>
+      {/* ── Empty ── */}
+      {!isLoading && totalSessions === 0 && (
+        <EmptyState startNewSession={startNewSession} />
+      )}
 
-      <section className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8" data-purpose="detailed-metrics">
-        {/*  Skill Breakdown (Spider/Radar)  */}
-        <div className="bg-white p-4 sm:p-8 rounded-2xl border border-impromptu-border shadow-sm min-h-[400px] flex flex-col">
-          <h3 className="text-lg font-bold text-impromptu-black mb-6">Average Skill Breakdown</h3>
-          <div className="flex-1 w-full h-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <RadarChart cx="50%" cy="50%" outerRadius="75%" data={radarData}>
-                <PolarGrid stroke="#e5e7eb" />
-                <PolarAngleAxis dataKey="subject" tick={{ fill: '#6b7280', fontSize: 14, fontWeight: 600 }} />
-                <PolarRadiusAxis angle={30} domain={[0, 10]} tick={false} axisLine={false} />
-                <Radar name="Average Score" dataKey="score" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.4} />
-                <RechartsTooltip 
-                  contentStyle={{ borderRadius: '8px', border: '1px solid #f3f4f6', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}
-                  itemStyle={{ color: '#1f2937', fontWeight: 'bold' }}
-                />
-              </RadarChart>
-            </ResponsiveContainer>
+      {/* ── Content ── */}
+      {!isLoading && totalSessions > 0 && (
+        <div className="flex flex-col gap-8">
+
+          {/* 1. Compact snapshot strip */}
+          <ProgressSnapshot
+            sessionsThisMonth={sessionsThisMonth}
+            avgScore={avgScore}
+            scoreTrend={scoreTrend}
+            bestScore={bestScore}
+            bestScoreDate={bestScoreDate}
+          />
+
+          {/* 2. Hero: Score over time (full width) */}
+          <ScoreTrendChart data={scoreTrendData} />
+
+          {/* 3. Topics + Radar (equal width) */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <TopicsChart data={topicsData} />
+            <SkillRadar data={radarData} />
           </div>
-        </div>
 
-        {/*  Category Distribution  */}
-        <div className="bg-white p-4 sm:p-8 rounded-2xl border border-impromptu-border shadow-sm min-h-[400px] flex flex-col">
-          <h3 className="text-lg font-bold text-impromptu-black mb-6">Topics Practiced</h3>
-          <div className="flex-1 w-full h-full flex flex-col items-center justify-center">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={pieData}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={60}
-                  outerRadius={100}
-                  paddingAngle={5}
-                  dataKey="value"
-                >
-                  {pieData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={pieColors[index % pieColors.length]} />
-                  ))}
-                </Pie>
-                <RechartsTooltip 
-                  contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}
-                />
-                <Legend verticalAlign="bottom" height={36} iconType="circle" />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
+          {/* 4. Practice Activity (full width bar chart) */}
+          <PracticeActivity data={activityData} />
+
         </div>
-      </section>
+      )}
     </div>
   );
 }

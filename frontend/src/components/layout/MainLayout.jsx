@@ -1,27 +1,31 @@
 import React, { useState } from 'react';
-import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
+import { Outlet, useNavigate } from 'react-router-dom';
+import { Menu } from 'lucide-react';
+import { motion } from 'framer-motion';
+import Sidebar from '../dashboard/Sidebar';
+
+const API_BASE =
+  import.meta.env.VITE_API_BASE ||
+  (import.meta.env.PROD ? '/api' : 'http://localhost:4000/api');
+
+const VALID_CATEGORIES = [
+  'Technology',
+  'Education',
+  'Current Affairs',
+  'Personal Experience',
+  'Business & Entrepreneurship',
+];
 
 export default function MainLayout({ user, logout }) {
   const navigate = useNavigate();
-  const location = useLocation();
-  const API_BASE = import.meta.env.VITE_API_BASE || (import.meta.env.PROD ? '/api' : 'http://localhost:4000/api');
-
-  const [isModalOpen, setIsModalOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('Technology');
   const [selectedDifficulty, setSelectedDifficulty] = useState('medium');
   const [isStarting, setIsStarting] = useState(false);
 
-  const validCategories = [
-    'Technology',
-    'Education',
-    'Current Affairs',
-    'Personal Experience',
-    'Business & Entrepreneurship',
-  ];
-
   const startNewSession = () => setIsModalOpen(true);
-  const closeStartSessionModal = () => setIsModalOpen(false);
+  const closeModal = () => setIsModalOpen(false);
 
   const handleStartSession = async () => {
     setIsStarting(true);
@@ -30,172 +34,113 @@ export default function MainLayout({ user, logout }) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ category: selectedCategory, difficulty: selectedDifficulty })
+        body: JSON.stringify({
+          category: selectedCategory,
+          difficulty: selectedDifficulty,
+        }),
       });
       const sessionData = await res.json();
       if (sessionData.id) {
-        closeStartSessionModal();
+        closeModal();
         navigate(`/session/${sessionData.id}`, { state: { session: sessionData } });
       } else {
         alert(sessionData.error || 'Failed to create session');
       }
-    } catch (e) {
+    } catch {
       alert('Failed to connect to server');
     } finally {
       setIsStarting(false);
     }
   };
 
-  const navLinks = [
-    { name: 'Dashboard', path: '/', icon: 'dashboard' },
-    { name: 'Session History', path: '/history', icon: 'history' },
-    { name: 'Progress', path: '/progress', icon: 'progress' },
-  ];
-
   return (
     <>
-      <header className="fixed top-0 left-0 right-0 h-16 bg-white border-b border-gray-100 flex items-center justify-between px-4 md:px-8 z-50">
-        <div className="flex items-center">
-          <button 
-            className="md:hidden mr-4 p-2 text-gray-600 hover:text-black hover:bg-gray-100 rounded-lg transition-colors"
-            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            aria-label="Toggle Menu"
-          >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              {isMobileMenuOpen ? (
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-              ) : (
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
-              )}
-            </svg>
-          </button>
-          <span className="text-2xl font-extrabold tracking-tight">ImpromptuAI</span>
-        </div>
-        <div className="flex items-center space-x-4">
-          <button aria-label="Profile" className="p-1 border border-gray-200 rounded-full hover:border-gray-400 transition-colors">
-            <div className="h-8 w-8 rounded-full bg-gray-100 flex items-center justify-center overflow-hidden shrink-0">
-              {user?.photo ? (
-                <img src={user.photo} alt="Profile" className="h-full w-full object-cover" />
-              ) : (
-                <span className="font-bold text-gray-700 text-xs">{user?.name?.charAt(0).toUpperCase()}</span>
-              )}
-            </div>
-          </button>
-        </div>
+      {/* Mobile top bar (only visible on small screens) */}
+      <header className="md:hidden fixed top-0 left-0 right-0 h-14 bg-white border-b border-[#ECECEC] flex items-center justify-between px-4 z-30">
+        <button
+          onClick={() => setIsMobileMenuOpen(true)}
+          className="p-2 rounded-xl text-[#666666] hover:bg-[#F5F5F4] transition-colors"
+          aria-label="Open navigation menu"
+        >
+          <Menu size={20} />
+        </button>
+        <span className="text-[14px] font-semibold text-[#111111] tracking-tight">ImpromptuAI</span>
+        {/* Spacer to balance */}
+        <div className="w-9" />
       </header>
 
-      <div className="flex pt-16 min-h-screen overflow-hidden">
-        {/* Mobile Overlay */}
-        {isMobileMenuOpen && (
-          <div 
-            className="fixed inset-0 bg-black/50 z-30 md:hidden"
-            onClick={() => setIsMobileMenuOpen(false)}
-          />
-        )}
+      {/* Sidebar */}
+      <Sidebar
+        user={user}
+        logout={logout}
+        startNewSession={startNewSession}
+        isMobileOpen={isMobileMenuOpen}
+        onMobileClose={() => setIsMobileMenuOpen(false)}
+      />
 
-        <aside className={`w-64 border-r border-gray-100 flex flex-col fixed inset-y-0 left-0 pt-16 h-full bg-white z-40 transform transition-transform duration-300 ease-in-out md:translate-x-0 ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-          <div className="p-6 flex items-center space-x-3">
-            <div className="h-10 w-10 rounded-full bg-gray-100 flex items-center justify-center font-bold text-gray-700 overflow-hidden shrink-0">
-              {user?.photo ? (
-                <img src={user.photo} alt="Profile" className="h-full w-full object-cover" />
-              ) : (
-                user?.name?.charAt(0).toUpperCase()
-              )}
-            </div>
-            <div>
-              <h3 className="font-bold text-sm leading-none">{user?.name}</h3>
-              <p className="text-xs text-gray-500 mt-1">{user?.email}</p>
-            </div>
-          </div>
-          
-          <div className="px-4 mb-6">
-            <button onClick={startNewSession} className="w-full bg-black text-white py-3 px-4 rounded-full flex items-center justify-center space-x-2 font-semibold hover:bg-zinc-800 transition-colors">
-              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path d="M12 4v16m8-8H4" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" />
-              </svg>
-              <span>New Session</span>
-            </button>
-          </div>
+      {/* Main content */}
+      <main
+        className="md:pl-60 min-h-screen bg-[#FAFAF8] pt-14 md:pt-0"
+      >
+        <Outlet context={{ user, logout, startNewSession }} />
+      </main>
 
-          <nav className="flex-1 px-2 space-y-1">
-            {navLinks.map((link) => (
-              <Link 
-                key={link.path}
-                className={`flex items-center space-x-3 px-4 py-3 rounded-full font-semibold transition-all ${
-                  location.pathname === link.path 
-                    ? 'bg-zinc-100 text-black' 
-                    : 'text-gray-600 hover:bg-gray-50'
-                }`}
-                to={link.path}
-              >
-                {link.icon === 'dashboard' && (
-                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" />
-                  </svg>
-                )}
-                {link.icon === 'history' && (
-                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" />
-                  </svg>
-                )}
-                {link.icon === 'progress' && (
-                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" />
-                  </svg>
-                )}
-                <span>{link.name}</span>
-              </Link>
-            ))}
-          </nav>
-
-          <nav className="p-2 space-y-1 border-t border-gray-100">
-            <Link className={`flex items-center space-x-3 px-4 py-3 rounded-full transition-all ${
-              location.pathname === '/settings' ? 'bg-zinc-100 text-black font-semibold' : 'text-gray-600 hover:bg-gray-50'
-            }`} to="/settings">
-              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" />
-                <path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" />
-              </svg>
-              <span>Settings</span>
-            </Link>
-            <button onClick={logout} className="w-full flex items-center space-x-3 px-4 py-3 text-gray-600 hover:bg-gray-50 rounded-full transition-all">
-              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" />
-              </svg>
-              <span>Logout</span>
-            </button>
-          </nav>
-        </aside>
-
-        <main className="flex-1 md:ml-64 w-full bg-surface min-h-screen">
-          <Outlet context={{ user, logout, startNewSession }} />
-        </main>
-      </div>
-
+      {/* New Session Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-[60] flex items-center justify-center">
-          <div className="bg-white p-8 rounded-3xl w-full max-w-md shadow-2xl">
-            <h2 className="text-2xl font-bold mb-6">Configure Session</h2>
-            
-            <div className="mb-6">
-              <label className="block text-sm font-bold text-gray-700 mb-2">Category</label>
-              <select 
-                value={selectedCategory} 
-                onChange={(e) => setSelectedCategory(e.target.value)}
-                className="w-full border border-gray-200 rounded-xl p-3 focus:outline-none focus:border-black transition-colors"
+        <div
+          className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[60] flex items-center justify-center px-4"
+          onClick={(e) => { if (e.target === e.currentTarget) closeModal(); }}
+        >
+          <motion.div
+            initial={{ opacity: 0, scale: 0.96, y: 8 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.96, y: 8 }}
+            transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+            className="bg-white rounded-2xl p-7 w-full max-w-md border border-[#ECECEC] shadow-[0_8px_40px_rgba(0,0,0,0.12)]"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="modal-title"
+          >
+            <h2
+              id="modal-title"
+              className="text-lg font-bold text-[#111111] tracking-tight mb-6"
+            >
+              Configure Session
+            </h2>
+
+            {/* Category */}
+            <div className="mb-5">
+              <label
+                htmlFor="session-category"
+                className="block text-xs font-semibold text-[#666666] uppercase tracking-wider mb-2"
               >
-                {validCategories.map(cat => (
+                Category
+              </label>
+              <select
+                id="session-category"
+                value={selectedCategory}
+                onChange={(e) => setSelectedCategory(e.target.value)}
+                className="w-full border border-[#E8E8E8] rounded-xl px-3 py-2.5 text-sm text-[#111111] bg-white focus:outline-none focus:border-[#111111] transition-colors"
+              >
+                {VALID_CATEGORIES.map((cat) => (
                   <option key={cat} value={cat}>{cat}</option>
                 ))}
               </select>
             </div>
 
-            <div className="mb-8">
-              <label className="block text-sm font-bold text-gray-700 mb-2">Difficulty</label>
-              <select 
-                value={selectedDifficulty} 
+            {/* Difficulty */}
+            <div className="mb-7">
+              <label
+                htmlFor="session-difficulty"
+                className="block text-xs font-semibold text-[#666666] uppercase tracking-wider mb-2"
+              >
+                Difficulty
+              </label>
+              <select
+                id="session-difficulty"
+                value={selectedDifficulty}
                 onChange={(e) => setSelectedDifficulty(e.target.value)}
-                className="w-full border border-gray-200 rounded-xl p-3 focus:outline-none focus:border-black transition-colors"
+                className="w-full border border-[#E8E8E8] rounded-xl px-3 py-2.5 text-sm text-[#111111] bg-white focus:outline-none focus:border-[#111111] transition-colors"
               >
                 <option value="easy">Easy</option>
                 <option value="medium">Medium</option>
@@ -203,22 +148,25 @@ export default function MainLayout({ user, logout }) {
               </select>
             </div>
 
-            <div className="flex gap-4">
-              <button 
-                onClick={closeStartSessionModal} 
-                className="flex-1 py-3 px-4 bg-gray-100 hover:bg-gray-200 text-black font-bold rounded-full transition-colors"
+            {/* Actions */}
+            <div className="flex gap-3">
+              <button
+                onClick={closeModal}
+                className="flex-1 py-2.5 px-4 bg-[#F5F5F4] hover:bg-[#EBEBEA] text-[#111111] font-semibold rounded-xl text-sm transition-colors"
               >
                 Cancel
               </button>
-              <button 
-                onClick={handleStartSession} 
+              <motion.button
+                whileHover={{ scale: 1.01 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={handleStartSession}
                 disabled={isStarting}
-                className="flex-1 py-3 px-4 bg-black hover:bg-zinc-800 text-white font-bold rounded-full transition-colors disabled:opacity-50"
+                className="flex-1 py-2.5 px-4 bg-[#111111] hover:bg-black text-white font-semibold rounded-xl text-sm transition-colors disabled:opacity-50"
               >
-                {isStarting ? 'Starting...' : 'Start Session'}
-              </button>
+                {isStarting ? 'Starting…' : 'Start Session'}
+              </motion.button>
             </div>
-          </div>
+          </motion.div>
         </div>
       )}
     </>
