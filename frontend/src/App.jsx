@@ -10,6 +10,7 @@ import SessionHistoryScreen from './pages/SessionHistoryScreen';
 import ProgressScreen from './pages/ProgressScreen';
 import SettingsScreen from './pages/SettingsScreen';
 import MainLayout from './components/layout/MainLayout';
+import LandingPage from './pages/LandingPage';
 
 const API_BASE = import.meta.env.VITE_API_BASE || (import.meta.env.PROD ? '/api' : 'http://localhost:4000/api');
 
@@ -48,6 +49,9 @@ const App = () => {
   return (
     <BrowserRouter>
       <Routes>
+        {/* Public Landing Page */}
+        <Route path="/landing" element={<LandingPage />} />
+
         {/* Auth Routes */}
         <Route path="/login" element={user ? <Navigate to="/" /> : <LoginPage setUser={setUser} />} />
         <Route path="/signup" element={user ? <Navigate to="/" /> : <CreateAccountScreen setUser={setUser} />} />
@@ -56,7 +60,7 @@ const App = () => {
         <Route path="/session/:id" element={user ? <SessionFlow user={user} logout={logout} /> : <Navigate to="/login" />} />
 
         {/* Protected Dashboard Routes with Shared Layout */}
-        <Route element={user ? <MainLayout user={user} logout={logout} /> : <Navigate to="/login" />}>
+        <Route element={user ? <MainLayout user={user} logout={logout} /> : <Navigate to="/landing" />}>
           <Route path="/" element={<DashboardScreen />} />
           <Route path="/history" element={<SessionHistoryScreen />} />
           <Route path="/progress" element={<ProgressScreen />} />
@@ -64,7 +68,7 @@ const App = () => {
         </Route>
 
         {/* Fallback */}
-        <Route path="*" element={<Navigate to="/" />} />
+        <Route path="*" element={<Navigate to="/landing" />} />
       </Routes>
     </BrowserRouter>
   );
