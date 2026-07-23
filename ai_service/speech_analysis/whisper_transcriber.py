@@ -4,6 +4,8 @@ import os
 import logging
 from typing import Any
 from openai import OpenAI
+from tenacity import retry, wait_random_exponential, stop_after_attempt
+import openai
 
 from speech_analysis.utils import round_val, timed
 
@@ -17,6 +19,7 @@ if api_key:
         base_url="https://api.groq.com/openai/v1"
     )
 
+@retry(wait=wait_random_exponential(min=1, max=60), stop=stop_after_attempt(6), retry_error_callback=lambda retry_state: logger.error(f"Failed after {retry_state.attempt_number} attempts"))
 @timed
 def transcribe(audio_path: str) -> dict[str, Any]:
     """Transcribe an audio file with Whisper API and return structured data.

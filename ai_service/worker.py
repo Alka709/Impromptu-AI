@@ -3,6 +3,7 @@ import json
 import tempfile
 import requests
 import subprocess
+import socket
 from dotenv import load_dotenv
 
 from agents.evaluation_pipeline import EvaluationPipeline
@@ -13,6 +14,7 @@ from telemetry import logger
 load_dotenv(override=True)
 
 pipeline = EvaluationPipeline()
+WORKER_ID = socket.gethostname()
 
 def process_evaluation_job(job_data: dict):
     """Main RQ job handler for evaluating audio"""
@@ -23,7 +25,7 @@ def process_evaluation_job(job_data: dict):
     callback_url = job_data.get('reportCallbackUrl')
     past_sessions = job_data.get('history', [])
 
-    logger.info(f"Starting evaluation job for session {session_id}", extra={"session_id": session_id, "user_id": user_id})
+    logger.info(f"[Worker {WORKER_ID}] Starting evaluation job for session {session_id}", extra={"session_id": session_id, "user_id": user_id, "worker_id": WORKER_ID})
 
     temp_path = None
     wav_path = None
@@ -56,17 +58,17 @@ def process_evaluation_job(job_data: dict):
             raise e
 
         # 2. Extract metrics using speech_analysis
-        logger.info(f"Extracting speech metrics from {wav_path}...", extra={"session_id": session_id})
+        logger.info(f"[Worker {WORKER_ID}] Extracting speech metrics from {wav_path}...", extra={"session_id": session_id, "worker_id": WORKER_ID})
         metrics = extract_all_metrics(wav_path)
         
         # 3. Evaluate with Gemini
-        logger.info(f"Evaluating with Gemini", extra={"session_id": session_id, "metrics_count": len(metrics) if metrics else 0})
+        logger.info(f"[Worker {WORKER_ID}] Evaluating with Gemini", extra={"session_id": session_id, "metrics_count": len(metrics) if metrics else 0, "worker_id": WORKER_ID})
         evaluation = pipeline.evaluate(
             metrics=metrics,
             topic=topic,
             history=past_sessions,
         )
-        logger.info(f"Gemini evaluation completed", extra={"session_id": session_id, "overallScore": evaluation.get('overallScore')})
+        logger.info(f"[Worker {WORKER_ID}] Gemini evaluation completed", extra={"session_id": session_id, "overallScore": evaluation.get('overallScore'), "worker_id": WORKER_ID})
         
         # 4. Send results back to Express
         payload = {
@@ -99,10 +101,10 @@ def process_evaluation_job(job_data: dict):
 
         deliver_webhook()
         
-        logger.info(f"Job completed successfully for session {session_id}", extra={"session_id": session_id})
+        logger.info(f"[Worker {WORKER_ID}] Job completed successfully for session {session_id}", extra={"session_id": session_id, "worker_id": WORKER_ID})
 
     except Exception as e:
-        logger.error(f"Job failed for session {session_id}: {e}", exc_info=True, extra={"session_id": session_id})
+        logger.error(f"[Worker {WORKER_ID}] Job failed for session {session_id}: {e}", exc_info=True, extra={"session_id": session_id, "worker_id": WORKER_ID})
         try:
             logger.info(f"Sending failure webhook to {callback_url}")
             requests.post(

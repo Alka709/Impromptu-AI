@@ -60,3 +60,12 @@ Option D: Storing Audio in the PostgreSQL Database (Bytea)
 - **High Operational Complexity**: Running this locally or deploying it to production requires orchestrating multiple moving parts (Node server, React frontend, FastAPI server, Python Worker, PostgreSQL DB, Redis Server, AWS S3). 
 - **Harder Debugging (Distributed Tracing)**: If a request fails, you have to check multiple logs. Did it fail in Node? Did the S3 upload fail? Did the RQ Worker crash? Did the Webhook fail to deliver? Debugging requires tracing IDs across service boundaries.
 - **Eventual Consistency Issues**: Because the system is asynchronous, the frontend has to either poll the backend (`GET /api/sessions/:id/evaluation`) or rely on WebSockets to know when the background job is done. This adds complexity to the frontend state management.
+
+5. SECURITY, RESILIENCE AND SCALABILITY (Production Hardening)
+--------------------------------------------------------------------
+To address edge cases and prepare the system for heavy production loads, several mechanisms are layered over the base architecture:
+- **Rate Limiting (DDoS Protection)**: The Node.js Express app enforces a global limit of 100 requests per 15 minutes, with a highly restrictive 20 requests per minute limit on AI-triggering endpoints (`/sessions`).
+- **Orphaned State Cleanup**: A daily background cron job (Node.js) directly queries AWS S3 to delete files older than 24 hours that were never linked to a confirmed database session, preventing unbound storage cost growth.
+- **Ghost Session Auto-Recovery**: If a background Python worker crashes silently mid-process (e.g., OOM kill), a recurring 30-minute backend cron job identifies sessions stuck in 'processing' for >2 hours and re-queues them via Redis.
+- **Intelligent API Retries**: All 3rd-party LLM and transcription API calls (Groq, Gemini) are wrapped in Exponential Backoff loops. Instead of failing out instantly on a `429 Rate Limit` error, the workers pause and gracefully retry up to 6 times.
+- **Parallel Queue Consumption**: The background processing layer runs multiple replicas of the Python RQ Worker concurrently (e.g., 3 instances), directly multiplying throughput for concurrent users without bottlenecking on a single queue.

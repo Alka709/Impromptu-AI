@@ -62,6 +62,8 @@ services:
     build:
       context: ./ai_service
     command: ["rq", "worker", "--worker-class", "rq.SimpleWorker", "-u", "redis://redis:6379"]
+    deploy:
+      replicas: 3
     volumes:
       - ./ai_service:/app
       - hf_cache:/home/appuser/.cache/huggingface
