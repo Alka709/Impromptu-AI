@@ -9,6 +9,7 @@ const authRoutes = require('./routes/authRoutes');
 const sessionRoutes = require('./routes/sessionRoutes');
 const userRoutes = require('./routes/userRoutes');
 const webhookRoutes = require('./routes/webhookRoutes');
+const adminRoutes = require('./routes/admin.routes');
 
 const app = express();
 
@@ -39,6 +40,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/sessions', sessionLimiter, sessionRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/webhooks', webhookRoutes);
+app.use('/api/admin', adminRoutes);
 
 // Frontend Logging Proxy
 app.post('/api/logs', (req, res) => {
