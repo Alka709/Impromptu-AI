@@ -27,8 +27,16 @@ const App = () => {
 
   useEffect(() => {
     const fetchMe = async () => {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+
       try {
-        const res = await fetch(`${API_BASE}/auth/me`, { credentials: 'include' });
+        const res = await fetch(`${API_BASE}/auth/me`, { 
+          credentials: 'include',
+          signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+        
         if (res.ok) {
           const data = await res.json();
           setUser(data.user);
