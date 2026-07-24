@@ -55,7 +55,7 @@ async def generate_topic(request: TopicRequest):
     """
 
     try:
-        model = genai.GenerativeModel('gemini-1.5-flash-latest')
+        model = genai.GenerativeModel('gemini-3.5-flash')
         response = model.generate_content(
             prompt,
             generation_config=genai.types.GenerationConfig(
